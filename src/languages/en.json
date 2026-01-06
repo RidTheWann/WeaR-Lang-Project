@@ -1,0 +1,20 @@
+{
+    "name": "English",
+    "code": "en",
+    "keywords": {
+        "var": "var",
+        "const": "const",
+        "function": "function",
+        "return": "return",
+        "if": "if",
+        "else": "else",
+        "while": "while",
+        "for": "for",
+        "and": "and",
+        "or": "or",
+        "print": "print",
+        "true": "true",
+        "false": "false",
+        "null": "null"
+    }
+}

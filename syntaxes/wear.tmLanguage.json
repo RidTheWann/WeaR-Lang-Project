@@ -1,0 +1,60 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "WeaR Lang",
+    "patterns": [
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#numbers"
+        }
+    ],
+    "repository": {
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.wear",
+                    "match": "\\b(jika|if|lainnya|else|kembalikan|return|fungsi|function)\\b"
+                },
+                {
+                    "name": "support.function.wear",
+                    "match": "\\b(cetak|print)\\b"
+                },
+                {
+                    "name": "storage.type.wear",
+                    "match": "\\b(var)\\b"
+                },
+                {
+                    "name": "constant.language.wear",
+                    "match": "\\b(benar|true|salah|false)\\b"
+                }
+            ]
+        },
+        "strings": {
+            "name": "string.quoted.double.wear",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.wear",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        "comments": {
+            "name": "comment.line.double-slash.wear",
+            "match": "//.*$"
+        },
+        "numbers": {
+            "name": "constant.numeric.wear",
+            "match": "\\b\\d+(\\.\\d+)?\\b"
+        }
+    },
+    "scopeName": "source.wear"
+}

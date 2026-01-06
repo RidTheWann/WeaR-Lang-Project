@@ -1,0 +1,31 @@
+// =========================================
+// WeaR Lang Demo - Arrays & While Loops
+// Indonesian Dialect
+// =========================================
+
+// Demo Array & Loop
+var angka = [10, 20, 30, 40, 50]
+var i = 0
+
+cetak "Memulai Loop..."
+
+selama (i < 5) {
+    cetak "Angka ke-" + i + " adalah: " + angka[i]
+    i = i + 1
+}
+
+cetak "Selesai!"
+
+// Additional array examples
+cetak ""
+cetak "=== Contoh Array Lainnya ==="
+
+var buah = ["Apel", "Jeruk", "Mangga"]
+cetak "Buah pertama: " + buah[0]
+cetak "Buah kedua: " + buah[1]
+cetak "Buah ketiga: " + buah[2]
+
+// Nested expressions with arrays
+var nilai = [100, 200, 300]
+var total = nilai[0] + nilai[1] + nilai[2]
+cetak "Total nilai: " + total

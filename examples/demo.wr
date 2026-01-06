@@ -1,0 +1,41 @@
+// =========================================
+// WeaR Lang Demo - Indonesian Dialect
+// =========================================
+
+// Beginner Style - Simple variable and print
+var nama = "Ridwan"
+cetak "Halo " + nama
+
+// Pro Style - Using Functions
+fungsi hitung_luas(panjang, lebar) {
+    kembalikan panjang * lebar
+}
+
+// Control flow with if/else
+jika (hitung_luas(10, 5) > 40) {
+    cetak "Luasnya besar!"
+} lainnya {
+    cetak "Luasnya kecil."
+}
+
+// More complex example - Multiple functions
+fungsi greet(nama, umur) {
+    var pesan = "Selamat datang, " + nama + "! Umur: " + umur
+    kembalikan pesan
+}
+
+var salam = greet("Budi", 25)
+cetak salam
+
+// Arithmetic operations
+var a = 10
+var b = 3
+cetak "Penjumlahan: " + (a + b)
+cetak "Pengurangan: " + (a - b)
+cetak "Perkalian: " + (a * b)
+
+// Boolean logic
+var aktif = benar
+jika (aktif) {
+    cetak "Status: Aktif"
+}

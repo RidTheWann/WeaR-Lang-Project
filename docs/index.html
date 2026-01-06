@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeaR Playground - Interactive Code Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-primary: #58a6ff;
+            --accent-success: #3fb950;
+            --accent-error: #f85149;
+            --accent-warning: #d29922;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-primary), #a371f7);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), #a371f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        select {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        select:hover,
+        select:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .run-btn {
+            background: linear-gradient(135deg, var(--accent-success), #2ea043);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        .run-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(63, 185, 80, 0.4);
+        }
+
+        .run-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: var(--bg-secondary);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .editor-panel {
+            border-right: 1px solid var(--border-color);
+        }
+
+        #code-editor {
+            flex: 1;
+            width: 100%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: none;
+            padding: 1rem;
+            font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            tab-size: 4;
+        }
+
+        #code-editor::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .output-panel {
+            background: var(--bg-primary);
+        }
+
+        #output {
+            flex: 1;
+            padding: 1rem;
+            font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .output-line {
+            padding: 0.1rem 0;
+        }
+
+        .output-success {
+            color: var(--text-primary);
+        }
+
+        .output-error {
+            color: var(--accent-error);
+        }
+
+        .output-info {
+            color: var(--accent-primary);
+        }
+
+        .status-bar {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-success);
+        }
+
+        .status-dot.error {
+            background: var(--accent-error);
+        }
+
+        /* Welcome message styling */
+        .welcome {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Keyboard shortcut hint */
+        .shortcut-hint {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        kbd {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0.1rem 0.4rem;
+            font-size: 0.75rem;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            main {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
+
+            .editor-panel {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">
+            <div class="logo-icon">W</div>
+            <span class="logo-text">WeaR Playground</span>
+        </div>
+        <div class="header-controls">
+            <select id="language-select" title="Select Language">
+                <option value="id">Indonesian</option>
+                <option value="en">English</option>
+            </select>
+            <button class="run-btn" id="run-btn" title="Run Code (Ctrl+Enter)">
+                ▶ Run
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div class="panel editor-panel">
+            <div class="panel-header">
+                <span class="panel-title">Editor</span>
+                <span class="shortcut-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> to run</span>
+            </div>
+            <textarea id="code-editor" placeholder="Write your WeaR code here..." spellcheck="false">// =========================================
+// WeaR Lang Demo - Arrays & While Loops
+// =========================================
+
+// Deklarasi Array
+var angka = [10, 20, 30, 40, 50]
+var i = 0
+
+cetak "Memulai Loop..."
+cetak ""
+
+// While Loop dengan akses array
+selama (i < 5) {
+    cetak "Angka ke-" + i + " adalah: " + angka[i]
+    i = i + 1
+}
+
+cetak ""
+cetak "Selesai!"
+
+// Contoh fungsi
+fungsi sapa(nama) {
+    kembalikan "Halo, " + nama + "!"
+}
+
+cetak ""
+cetak sapa("Developer")</textarea>
+        </div>
+
+        <div class="panel output-panel">
+            <div class="panel-header">
+                <span class="panel-title">Output</span>
+                <button id="clear-btn"
+                    style="background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.25rem 0.75rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Clear</button>
+            </div>
+            <div id="output">
+                <div class="welcome">Click "Run" or press Ctrl+Enter to execute your code...</div>
+            </div>
+        </div>
+    </main>
+
+    <div class="status-bar">
+        <div class="status-indicator">
+            <div class="status-dot" id="status-dot"></div>
+            <span id="status-text">Ready</span>
+        </div>
+        <div>
+            WeaR Lang v1.0 | Polyglot Programming Language
+        </div>
+    </div>
+
+    <script src="wear-web.js"></script>
+    <script>
+        // Initialize
+        const codeEditor = document.getElementById('code-editor');
+        const output = document.getElementById('output');
+        const runBtn = document.getElementById('run-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const languageSelect = document.getElementById('language-select');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+
+        let currentLanguage = 'id';
+
+        // Clear output
+        function clearOutput() {
+            output.innerHTML = '';
+        }
+
+        // Add output line
+        function addOutput(text, className = 'output-success') {
+            const line = document.createElement('div');
+            line.className = `output-line ${className}`;
+            line.textContent = text;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // Set status
+        function setStatus(text, isError = false) {
+            statusText.textContent = text;
+            statusDot.className = 'status-dot' + (isError ? ' error' : '');
+        }
+
+        // Run code
+        function runCode() {
+            clearOutput();
+
+            const code = codeEditor.value;
+            if (!code.trim()) {
+                addOutput('No code to run!', 'output-error');
+                setStatus('No code', true);
+                return;
+            }
+
+            setStatus('Running...');
+            addOutput('Executing...', 'output-info');
+
+            // Small delay for visual feedback
+            setTimeout(() => {
+                clearOutput();
+
+                try {
+                    // Create WearLang instance with output callback
+                    const wear = new window.WearLang(currentLanguage, (text) => {
+                        addOutput(text);
+                    });
+
+                    const result = wear.run(code);
+
+                    if (result.success) {
+                        addOutput('', 'output-info');
+                        addOutput('─'.repeat(40), 'output-info');
+                        addOutput('Execution completed successfully!', 'output-info');
+                        setStatus('Success');
+                    } else {
+                        result.errors.forEach(err => {
+                            addOutput(err, 'output-error');
+                        });
+                        setStatus('Error', true);
+                    }
+                } catch (err) {
+                    addOutput('Runtime Error: ' + err.message, 'output-error');
+                    setStatus('Error', true);
+                }
+            }, 50);
+        }
+
+        // Event listeners
+        runBtn.addEventListener('click', runCode);
+        clearBtn.addEventListener('click', () => {
+            clearOutput();
+            addOutput('Output cleared.', 'output-info');
+        });
+
+        languageSelect.addEventListener('change', (e) => {
+            currentLanguage = e.target.value;
+            setStatus(`Language: ${currentLanguage === 'id' ? 'Indonesian' : 'English'}`);
+
+            // Update example code based on language
+            if (currentLanguage === 'en') {
+                codeEditor.value = `// =========================================
+// WeaR Lang Demo - Arrays & While Loops
+// =========================================
+
+// Array Declaration
+var numbers = [10, 20, 30, 40, 50]
+var i = 0
+
+print "Starting Loop..."
+print ""
+
+// While Loop with array access
+while (i < 5) {
+    print "Number " + i + " is: " + numbers[i]
+    i = i + 1
+}
+
+print ""
+print "Done!"
+
+// Function example
+function greet(name) {
+    return "Hello, " + name + "!"
+}
+
+print ""
+print greet("Developer")`;
+            } else {
+                codeEditor.value = `// =========================================
+// WeaR Lang Demo - Arrays & While Loops
+// =========================================
+
+// Deklarasi Array
+var angka = [10, 20, 30, 40, 50]
+var i = 0
+
+cetak "Memulai Loop..."
+cetak ""
+
+// While Loop dengan akses array
+selama (i < 5) {
+    cetak "Angka ke-" + i + " adalah: " + angka[i]
+    i = i + 1
+}
+
+cetak ""
+cetak "Selesai!"
+
+// Contoh fungsi
+fungsi sapa(nama) {
+    kembalikan "Halo, " + nama + "!"
+}
+
+cetak ""
+cetak sapa("Developer")`;
+            }
+        });
+
+        // Keyboard shortcut: Ctrl+Enter to run
+        codeEditor.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                runCode();
+            }
+
+            // Tab key for indentation
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = codeEditor.selectionStart;
+                const end = codeEditor.selectionEnd;
+                codeEditor.value = codeEditor.value.substring(0, start) + '    ' + codeEditor.value.substring(end);
+                codeEditor.selectionStart = codeEditor.selectionEnd = start + 4;
+            }
+        });
+
+        // Initial message
+        console.log('WeaR Playground loaded! Use window.WearLang to access the interpreter.');
+    </script>
+</body>
+
+</html>

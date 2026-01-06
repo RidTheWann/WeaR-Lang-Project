@@ -1,0 +1,41 @@
+// =========================================
+// WeaR Lang Demo - English Dialect
+// =========================================
+
+// Beginner Style - Simple variable and print
+var name = "John"
+print "Hello " + name
+
+// Pro Style - Using Functions
+function calculate_area(length, width) {
+    return length * width
+}
+
+// Control flow with if/else
+if (calculate_area(10, 5) > 40) {
+    print "The area is large!"
+} else {
+    print "The area is small."
+}
+
+// More complex example - Multiple functions
+function greet(name, age) {
+    var message = "Welcome, " + name + "! Age: " + age
+    return message
+}
+
+var greeting = greet("Alice", 30)
+print greeting
+
+// Arithmetic operations
+var x = 15
+var y = 4
+print "Addition: " + (x + y)
+print "Subtraction: " + (x - y)
+print "Multiplication: " + (x * y)
+
+// Boolean logic
+var active = true
+if (active) {
+    print "Status: Active"
+}

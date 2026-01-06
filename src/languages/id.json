@@ -1,0 +1,20 @@
+{
+    "name": "Indonesian",
+    "code": "id",
+    "keywords": {
+        "var": "var",
+        "const": "konstan",
+        "function": "fungsi",
+        "return": "kembalikan",
+        "if": "jika",
+        "else": "lainnya",
+        "while": "selama",
+        "for": "untuk",
+        "and": "dan",
+        "or": "atau",
+        "print": "cetak",
+        "true": "benar",
+        "false": "salah",
+        "null": "kosong"
+    }
+}
