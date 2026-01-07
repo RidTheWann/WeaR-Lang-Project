@@ -1,0 +1,13 @@
+// WeaR Lang Native Demo - String Manipulation
+// Test file for Stage-0 Bootstrap Compiler with String Functions
+
+var keyword = "cetak"
+var input = "cetak"
+
+jika (sama(input, keyword)) {
+    cetak "Keyword ditemukan!"
+    cetak "Panjang kata: " + panjang(input)
+    cetak "Huruf pertama: " + char_at(input, 0)
+} lainnya {
+    cetak "Bukan keyword."
+}

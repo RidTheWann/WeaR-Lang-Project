@@ -1,0 +1,10 @@
+// WeaR Lang Native Demo - Functions
+// Test file for Stage-0 Bootstrap Compiler with Function Support
+
+fungsi hitung(a, b) {
+    cetak "Menghitung..."
+    kembalikan a + b
+}
+
+var hasil = hitung(10, 5)
+cetak "Hasil fungsi: " + hasil

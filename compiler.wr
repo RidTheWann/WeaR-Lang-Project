@@ -1,0 +1,1151 @@
+// ============================================================
+// WeaR Lang Self-Hosted Transpiler (Stage-1 Bootstrap)
+// ============================================================
+// PRODUCTION-READY VERSION with Dual-Buffer Output
+// This transpiler is written IN WeaR Lang and compiled BY the Stage-0 compiler.
+// It reads "input.wr" and generates "output.c" with correct function placement.
+
+// Helper: Check if character is a digit (0-9)
+fungsi is_digit(c) {
+    jika (sama(c, "0")) { kembalikan 1 }
+    jika (sama(c, "1")) { kembalikan 1 }
+    jika (sama(c, "2")) { kembalikan 1 }
+    jika (sama(c, "3")) { kembalikan 1 }
+    jika (sama(c, "4")) { kembalikan 1 }
+    jika (sama(c, "5")) { kembalikan 1 }
+    jika (sama(c, "6")) { kembalikan 1 }
+    jika (sama(c, "7")) { kembalikan 1 }
+    jika (sama(c, "8")) { kembalikan 1 }
+    jika (sama(c, "9")) { kembalikan 1 }
+    kembalikan 0
+}
+
+// Helper: Check if character is a letter (a-z, A-Z, _)
+fungsi is_letter(c) {
+    jika (sama(c, "a")) { kembalikan 1 }
+    jika (sama(c, "b")) { kembalikan 1 }
+    jika (sama(c, "c")) { kembalikan 1 }
+    jika (sama(c, "d")) { kembalikan 1 }
+    jika (sama(c, "e")) { kembalikan 1 }
+    jika (sama(c, "f")) { kembalikan 1 }
+    jika (sama(c, "g")) { kembalikan 1 }
+    jika (sama(c, "h")) { kembalikan 1 }
+    jika (sama(c, "i")) { kembalikan 1 }
+    jika (sama(c, "j")) { kembalikan 1 }
+    jika (sama(c, "k")) { kembalikan 1 }
+    jika (sama(c, "l")) { kembalikan 1 }
+    jika (sama(c, "m")) { kembalikan 1 }
+    jika (sama(c, "n")) { kembalikan 1 }
+    jika (sama(c, "o")) { kembalikan 1 }
+    jika (sama(c, "p")) { kembalikan 1 }
+    jika (sama(c, "q")) { kembalikan 1 }
+    jika (sama(c, "r")) { kembalikan 1 }
+    jika (sama(c, "s")) { kembalikan 1 }
+    jika (sama(c, "t")) { kembalikan 1 }
+    jika (sama(c, "u")) { kembalikan 1 }
+    jika (sama(c, "v")) { kembalikan 1 }
+    jika (sama(c, "w")) { kembalikan 1 }
+    jika (sama(c, "x")) { kembalikan 1 }
+    jika (sama(c, "y")) { kembalikan 1 }
+    jika (sama(c, "z")) { kembalikan 1 }
+    jika (sama(c, "A")) { kembalikan 1 }
+    jika (sama(c, "B")) { kembalikan 1 }
+    jika (sama(c, "C")) { kembalikan 1 }
+    jika (sama(c, "D")) { kembalikan 1 }
+    jika (sama(c, "E")) { kembalikan 1 }
+    jika (sama(c, "F")) { kembalikan 1 }
+    jika (sama(c, "G")) { kembalikan 1 }
+    jika (sama(c, "H")) { kembalikan 1 }
+    jika (sama(c, "I")) { kembalikan 1 }
+    jika (sama(c, "J")) { kembalikan 1 }
+    jika (sama(c, "K")) { kembalikan 1 }
+    jika (sama(c, "L")) { kembalikan 1 }
+    jika (sama(c, "M")) { kembalikan 1 }
+    jika (sama(c, "N")) { kembalikan 1 }
+    jika (sama(c, "O")) { kembalikan 1 }
+    jika (sama(c, "P")) { kembalikan 1 }
+    jika (sama(c, "Q")) { kembalikan 1 }
+    jika (sama(c, "R")) { kembalikan 1 }
+    jika (sama(c, "S")) { kembalikan 1 }
+    jika (sama(c, "T")) { kembalikan 1 }
+    jika (sama(c, "U")) { kembalikan 1 }
+    jika (sama(c, "V")) { kembalikan 1 }
+    jika (sama(c, "W")) { kembalikan 1 }
+    jika (sama(c, "X")) { kembalikan 1 }
+    jika (sama(c, "Y")) { kembalikan 1 }
+    jika (sama(c, "Z")) { kembalikan 1 }
+    jika (sama(c, "_")) { kembalikan 1 }
+    kembalikan 0
+}
+
+// Helper: Check if character is whitespace (space only, not newline)
+fungsi is_space(c) {
+    jika (sama(c, " ")) { kembalikan 1 }
+    kembalikan 0
+}
+
+// Helper: Check if a function name returns int
+fungsi returns_int(fn) {
+    jika (sama(fn, "panjang")) { kembalikan 1 }
+    jika (sama(fn, "sama")) { kembalikan 1 }
+    jika (sama(fn, "is_quote")) { kembalikan 1 }
+    jika (sama(fn, "is_newline")) { kembalikan 1 }
+    jika (sama(fn, "is_digit")) { kembalikan 1 }
+    jika (sama(fn, "is_letter")) { kembalikan 1 }
+    jika (sama(fn, "is_space")) { kembalikan 1 }
+    jika (sama(fn, "returns_int")) { kembalikan 1 }
+    jika (sama(fn, "returns_string")) { kembalikan 1 }
+    jika (sama(fn, "is_string_varname")) { kembalikan 1 }
+    kembalikan 0
+}
+
+// Helper: Check if a function name returns string
+fungsi returns_string(fn) {
+    jika (sama(fn, "baca_file")) { kembalikan 1 }
+    jika (sama(fn, "char_at")) { kembalikan 1 }
+    jika (sama(fn, "quote_char")) { kembalikan 1 }
+    jika (sama(fn, "newline_char")) { kembalikan 1 }
+    kembalikan 0
+}
+
+// Helper: Check if variable name suggests string type (Hungarian notation)
+// Extended for string concat detection
+fungsi is_string_varname(name) {
+    // Explicit exclusions for known integers starting with string prefixes
+    jika (sama(name, "pending_concat")) { kembalikan 0 }
+    jika (sama(name, "peek_i")) { kembalikan 0 }
+    jika (sama(name, "peek_scan")) { kembalikan 0 }
+    jika (sama(name, "i")) { kembalikan 0 }
+    jika (sama(name, "len")) { kembalikan 0 }
+    jika (sama(name, "done")) { kembalikan 0 }
+    jika (sama(name, "found_plus")) { kembalikan 0 }
+    jika (sama(name, "peek_idx")) { kembalikan 0 }
+    jika (sama(name, "func_brace_depth")) { kembalikan 0 }
+    jika (sama(name, "read_fn")) { kembalikan 0 }
+    jika (sama(name, "read_param")) { kembalikan 0 }
+    jika (sama(name, "first_param")) { kembalikan 0 }
+
+    var len = panjang(name)
+    jika (len >= 3) {
+        var p1 = char_at(name, 0)
+        var p2 = char_at(name, 1)
+        var p3 = char_at(name, 2)
+        // msg
+        jika (sama(p1, "m")) {
+            jika (sama(p2, "s")) {
+                jika (sama(p3, "g")) { kembalikan 1 }
+            }
+        }
+        // str
+        jika (sama(p1, "s")) {
+            jika (sama(p2, "t")) {
+                jika (sama(p3, "r")) { kembalikan 1 }
+            }
+        }
+    }
+
+    jika (len >= 4) {
+        var p1 = char_at(name, 0)
+        var p2 = char_at(name, 1)
+        var p3 = char_at(name, 2)
+        var p4 = char_at(name, 3)
+        // str_*
+        jika (sama(p1, "s")) {
+            jika (sama(p2, "t")) {
+                jika (sama(p3, "r")) { kembalikan 1 }
+            }
+            jika (sama(p2, "o")) { kembalikan 1 }
+            jika (sama(p2, "c")) { kembalikan 1 }
+        }
+        // file*, func*, final*
+        jika (sama(p1, "f")) {
+            jika (sama(p2, "i")) { kembalikan 1 }
+            jika (sama(p2, "u")) { kembalikan 1 }
+        }
+        // out*, output
+        jika (sama(p1, "o")) {
+            jika (sama(p2, "u")) { kembalikan 1 }
+        }
+        // word*
+        jika (sama(p1, "w")) {
+            jika (sama(p2, "o")) { kembalikan 1 }
+        }
+        // runtime*, result*, res*
+        jika (sama(p1, "r")) {
+            jika (sama(p2, "u")) { kembalikan 1 }
+            jika (sama(p2, "e")) { kembalikan 1 }
+        }
+        // teks, token*, temp*
+        jika (sama(p1, "t")) {
+            jika (sama(p2, "e")) { kembalikan 1 }
+            jika (sama(p2, "o")) { kembalikan 1 }
+        }
+        // peek*, param*, path*
+        jika (sama(p1, "p")) {
+            jika (sama(p2, "e")) { kembalikan 1 }
+            jika (sama(p2, "a")) { kembalikan 1 }
+        }
+        // global_*, gabung
+        jika (sama(p1, "g")) {
+            jika (sama(p2, "l")) { kembalikan 1 }
+            jika (sama(p2, "a")) { kembalikan 1 }
+        }
+        // main_*
+        jika (sama(p1, "m")) {
+            jika (sama(p2, "a")) { kembalikan 1 }
+        }
+        // code*, content*
+        jika (sama(p1, "c")) {
+            jika (sama(p2, "o")) { kembalikan 1 }
+        }
+        // buf*, buffer
+        jika (sama(p1, "b")) {
+            jika (sama(p2, "u")) { kembalikan 1 }
+        }
+        // name*, nl
+        jika (sama(p1, "n")) {
+            jika (sama(p2, "a")) { kembalikan 1 }
+            jika (sama(p2, "l")) { kembalikan 1 }
+        }
+        // var_name
+        jika (sama(p1, "v")) {
+            jika (sama(p2, "a")) { kembalikan 1 }
+        }
+        // expr_*
+        jika (sama(p1, "e")) {
+            jika (sama(p2, "x")) { kembalikan 1 }
+        }
+    }
+    jika (len >= 2) {
+        var p1 = char_at(name, 0)
+        var p2 = char_at(name, 1)
+        jika (sama(p1, "n")) {
+            jika (sama(p2, "l")) { kembalikan 1 }
+        }
+    }
+
+    jika (sama(name, "c")) { kembalikan 1 }
+    jika (sama(name, "q")) { kembalikan 1 }
+    jika (sama(name, "next")) { kembalikan 1 }
+    jika (sama(name, "num")) { kembalikan 1 } 
+    kembalikan 0
+}
+
+// Main Transpiler Program
+cetak "=== WeaR Lang Self-Hosted Transpiler ==="
+cetak "Reading: input.wr"
+
+var source = baca_file("input.wr")
+var len = panjang(source)
+var i = 0
+var done = 0
+
+cetak "Loading: runtime.c"
+var runtime_code = baca_file("runtime.c")
+
+// DUAL-BUFFER OUTPUT SYSTEM
+var global_code = ""
+var main_code = ""
+var nl = newline_char()
+
+// State management
+var inside_func = 0
+var func_brace_depth = 0
+var need_semi = 0
+var in_print = 0
+var print_type = 0
+var in_var_decl = 0
+var var_name = ""
+
+// Expression tracking for string concat
+var last_operand = ""
+var pending_concat = 0
+var concat_depth = 0
+
+selama (done == 0) {
+    jika (i >= len) {
+        done = 1
+    } lainnya {
+        var c = char_at(source, i)
+        
+        jika (is_space(c)) {
+            jika (inside_func == 1) {
+                global_code = global_code + " "
+            } lainnya {
+                main_code = main_code + " "
+            }
+            i = i + 1
+        } lainnya jika (is_newline(c)) {
+            jika (need_semi == 1) {
+                // Close any pending concat calls first
+                selama (pending_concat > 0) {
+                    jika (inside_func == 1) {
+                        global_code = global_code + ")"
+                    } lainnya {
+                        main_code = main_code + ")"
+                    }
+                    pending_concat = pending_concat - 1
+                }
+                jika (in_print == 1) {
+                    jika (inside_func == 1) {
+                        global_code = global_code + ");"
+                    } lainnya {
+                        main_code = main_code + ");"
+                    }
+                    in_print = 0
+                } lainnya {
+                    jika (inside_func == 1) {
+                        global_code = global_code + ";"
+                    } lainnya {
+                        main_code = main_code + ";"
+                    }
+                }
+                need_semi = 0
+            }
+            jika (inside_func == 1) {
+                global_code = global_code + nl
+            } lainnya {
+                main_code = main_code + nl
+            }
+            in_var_decl = 0
+            pending_concat = 0
+            last_operand = ""
+            i = i + 1
+        } lainnya jika (is_quote(c)) {
+            var str_content = ""
+            i = i + 1
+            var scan_str = 1
+            selama (scan_str == 1) {
+                jika (i >= len) {
+                    scan_str = 0
+                } lainnya {
+                    var next = char_at(source, i)
+                    jika (is_quote(next)) {
+                        scan_str = 0
+                        i = i + 1
+                    } lainnya {
+                        str_content = str_content + next
+                        i = i + 1
+                    }
+                }
+            }
+            var q = quote_char()
+            
+            jika (in_var_decl == 1) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "char* "
+                    global_code = global_code + var_name
+                    global_code = global_code + " = "
+                    global_code = global_code + q
+                    global_code = global_code + str_content
+                    global_code = global_code + q
+                } lainnya {
+                    main_code = main_code + "char* "
+                    main_code = main_code + var_name
+                    main_code = main_code + " = "
+                    main_code = main_code + q
+                    main_code = main_code + str_content
+                    main_code = main_code + q
+                }
+                in_var_decl = 0
+            } lainnya {
+                jika (inside_func == 1) {
+                    global_code = global_code + q
+                    global_code = global_code + str_content
+                    global_code = global_code + q
+                } lainnya {
+                    main_code = main_code + q
+                    main_code = main_code + str_content
+                    main_code = main_code + q
+                }
+            }
+            need_semi = 1
+        } lainnya jika (sama(c, "=")) {
+            jika (in_var_decl == 1) {
+                i = i + 1
+                var skip_sp = 1
+                selama (skip_sp == 1) {
+                    jika (i >= len) {
+                        skip_sp = 0
+                    } lainnya {
+                        var next = char_at(source, i)
+                        jika (is_space(next)) {
+                            i = i + 1
+                        } lainnya {
+                            skip_sp = 0
+                        }
+                    }
+                }
+                var peek_c = char_at(source, i)
+                jika (is_quote(peek_c)) {
+                    // String literal - let string handler deal with it
+                } lainnya jika (is_digit(peek_c)) {
+                    jika (inside_func == 1) {
+                        global_code = global_code + "int "
+                        global_code = global_code + var_name
+                        global_code = global_code + " = "
+                    } lainnya {
+                        main_code = main_code + "int "
+                        main_code = main_code + var_name
+                        main_code = main_code + " = "
+                    }
+                    in_var_decl = 0
+                } lainnya jika (is_letter(peek_c)) {
+                    var peek_word = ""
+                    var peek_i = i
+                    var peek_scan = 1
+                    selama (peek_scan == 1) {
+                        jika (peek_i >= len) {
+                            peek_scan = 0
+                        } lainnya {
+                            var peek_next = char_at(source, peek_i)
+                            jika (is_letter(peek_next)) {
+                                peek_word = peek_word + peek_next
+                                peek_i = peek_i + 1
+                            } lainnya jika (is_digit(peek_next)) {
+                                peek_word = peek_word + peek_next
+                                peek_i = peek_i + 1
+                            } lainnya {
+                                peek_scan = 0
+                            }
+                        }
+                    }
+                    jika (returns_int(peek_word)) {
+                        jika (inside_func == 1) {
+                            global_code = global_code + "int "
+                            global_code = global_code + var_name
+                            global_code = global_code + " = "
+                        } lainnya {
+                            main_code = main_code + "int "
+                            main_code = main_code + var_name
+                            main_code = main_code + " = "
+                        }
+                        in_var_decl = 0
+                    } lainnya jika (returns_string(peek_word)) {
+                        jika (inside_func == 1) {
+                            global_code = global_code + "char* "
+                            global_code = global_code + var_name
+                            global_code = global_code + " = "
+                        } lainnya {
+                            main_code = main_code + "char* "
+                            main_code = main_code + var_name
+                            main_code = main_code + " = "
+                        }
+                        in_var_decl = 0
+                    } lainnya {
+                        jika (is_string_varname(peek_word)) {
+                            jika (inside_func == 1) {
+                                global_code = global_code + "char* "
+                                global_code = global_code + var_name
+                                global_code = global_code + " = "
+                            } lainnya {
+                                main_code = main_code + "char* "
+                                main_code = main_code + var_name
+                                main_code = main_code + " = "
+                            }
+                        } lainnya jika (is_string_varname(var_name)) {
+                            jika (inside_func == 1) {
+                                global_code = global_code + "char* "
+                                global_code = global_code + var_name
+                                global_code = global_code + " = "
+                            } lainnya {
+                                main_code = main_code + "char* "
+                                main_code = main_code + var_name
+                                main_code = main_code + " = "
+                            }
+                        } lainnya {
+                            jika (inside_func == 1) {
+                                global_code = global_code + "int "
+                                global_code = global_code + var_name
+                                global_code = global_code + " = "
+                            } lainnya {
+                                main_code = main_code + "int "
+                                main_code = main_code + var_name
+                                main_code = main_code + " = "
+                            }
+                        }
+                        in_var_decl = 0
+                    }
+                } lainnya {
+                    jika (inside_func == 1) {
+                        global_code = global_code + "int "
+                        global_code = global_code + var_name
+                        global_code = global_code + " = "
+                    } lainnya {
+                        main_code = main_code + "int "
+                        main_code = main_code + var_name
+                        main_code = main_code + " = "
+                    }
+                    in_var_decl = 0
+                }
+            } lainnya {
+                // Check for ==
+                var next_i = i + 1
+                jika (next_i < len) {
+                    var next_c = char_at(source, next_i)
+                    jika (sama(next_c, "=")) {
+                        jika (inside_func == 1) {
+                            global_code = global_code + " == "
+                        } lainnya {
+                            main_code = main_code + " == "
+                        }
+                        i = i + 2
+                    } lainnya {
+                        jika (inside_func == 1) {
+                            global_code = global_code + " = "
+                        } lainnya {
+                            main_code = main_code + " = "
+                        }
+                        i = i + 1
+                    }
+                } lainnya {
+                    jika (inside_func == 1) {
+                        global_code = global_code + " = "
+                    } lainnya {
+                        main_code = main_code + " = "
+                    }
+                    i = i + 1
+                }
+            }
+        } lainnya jika (sama(c, "+")) {
+            // If in string concat mode, output comma separator instead of +
+            jika (pending_concat > 0) {
+                jika (inside_func == 1) {
+                    global_code = global_code + ", "
+                } lainnya {
+                    main_code = main_code + ", "
+                }
+            } lainnya {
+                jika (inside_func == 1) {
+                    global_code = global_code + " + "
+                } lainnya {
+                    main_code = main_code + " + "
+                }
+            }
+            i = i + 1
+        } lainnya jika (sama(c, "-")) {
+            jika (inside_func == 1) {
+                global_code = global_code + " - "
+            } lainnya {
+                main_code = main_code + " - "
+            }
+            i = i + 1
+        } lainnya jika (sama(c, "*")) {
+            jika (inside_func == 1) {
+                global_code = global_code + " * "
+            } lainnya {
+                main_code = main_code + " * "
+            }
+            i = i + 1
+        } lainnya jika (sama(c, "/")) {
+            var next_i = i + 1
+            jika (next_i < len) {
+                var next_c = char_at(source, next_i)
+                jika (sama(next_c, "/")) {
+                    i = i + 2
+                    var skip_comment = 1
+                    selama (skip_comment == 1) {
+                        jika (i >= len) {
+                            skip_comment = 0
+                        } lainnya {
+                            var comment_c = char_at(source, i)
+                            jika (is_newline(comment_c)) {
+                                skip_comment = 0
+                            } lainnya {
+                                i = i + 1
+                            }
+                        }
+                    }
+                } lainnya {
+                    jika (inside_func == 1) {
+                        global_code = global_code + " / "
+                    } lainnya {
+                        main_code = main_code + " / "
+                    }
+                    i = i + 1
+                }
+            } lainnya {
+                jika (inside_func == 1) {
+                    global_code = global_code + " / "
+                } lainnya {
+                    main_code = main_code + " / "
+                }
+                i = i + 1
+            }
+        } lainnya jika (sama(c, "<")) {
+            var next_i = i + 1
+            jika (next_i < len) {
+                var next_c = char_at(source, next_i)
+                jika (sama(next_c, "=")) {
+                    jika (inside_func == 1) {
+                        global_code = global_code + " <= "
+                    } lainnya {
+                        main_code = main_code + " <= "
+                    }
+                    i = i + 2
+                } lainnya {
+                    jika (inside_func == 1) {
+                        global_code = global_code + " < "
+                    } lainnya {
+                        main_code = main_code + " < "
+                    }
+                    i = i + 1
+                }
+            } lainnya {
+                jika (inside_func == 1) {
+                    global_code = global_code + " < "
+                } lainnya {
+                    main_code = main_code + " < "
+                }
+                i = i + 1
+            }
+        } lainnya jika (sama(c, ">")) {
+            var next_i = i + 1
+            jika (next_i < len) {
+                var next_c = char_at(source, next_i)
+                jika (sama(next_c, "=")) {
+                    jika (inside_func == 1) {
+                        global_code = global_code + " >= "
+                    } lainnya {
+                        main_code = main_code + " >= "
+                    }
+                    i = i + 2
+                } lainnya {
+                    jika (inside_func == 1) {
+                        global_code = global_code + " > "
+                    } lainnya {
+                        main_code = main_code + " > "
+                    }
+                    i = i + 1
+                }
+            } lainnya {
+                jika (inside_func == 1) {
+                    global_code = global_code + " > "
+                } lainnya {
+                    main_code = main_code + " > "
+                }
+                i = i + 1
+            }
+        } lainnya jika (sama(c, "(")) {
+            jika (inside_func == 1) {
+                global_code = global_code + "("
+            } lainnya {
+                main_code = main_code + "("
+            }
+            i = i + 1
+        } lainnya jika (sama(c, ")")) {
+            jika (inside_func == 1) {
+                global_code = global_code + ")"
+            } lainnya {
+                main_code = main_code + ")"
+            }
+            i = i + 1
+        } lainnya jika (sama(c, "{")) {
+            jika (inside_func == 1) {
+                global_code = global_code + " {"
+                func_brace_depth = func_brace_depth + 1
+            } lainnya {
+                main_code = main_code + " {"
+            }
+            need_semi = 0
+            i = i + 1
+        } lainnya jika (sama(c, "}")) {
+            // Add semicolon before } if needed (for inline statements like { return 1 })
+            jika (need_semi == 1) {
+                // Close any pending concat calls first
+                selama (pending_concat > 0) {
+                    jika (inside_func == 1) {
+                        global_code = global_code + ")"
+                    } lainnya {
+                        main_code = main_code + ")"
+                    }
+                    pending_concat = pending_concat - 1
+                }
+                jika (in_print == 1) {
+                    jika (inside_func == 1) {
+                        global_code = global_code + ");"
+                    } lainnya {
+                        main_code = main_code + ");"
+                    }
+                    in_print = 0
+                } lainnya {
+                    jika (inside_func == 1) {
+                        global_code = global_code + ";"
+                    } lainnya {
+                        main_code = main_code + ";"
+                    }
+                }
+                need_semi = 0
+            }
+            pending_concat = 0
+            jika (inside_func == 1) {
+                func_brace_depth = func_brace_depth - 1
+                global_code = global_code + "}"
+                jika (func_brace_depth == 0) {
+                    global_code = global_code + nl
+                    inside_func = 0
+                }
+            } lainnya {
+                main_code = main_code + "}"
+            }
+            need_semi = 0
+            i = i + 1
+        } lainnya jika (sama(c, ",")) {
+            jika (inside_func == 1) {
+                global_code = global_code + ", "
+            } lainnya {
+                main_code = main_code + ", "
+            }
+            i = i + 1
+        } lainnya jika (is_digit(c)) {
+            var num = c
+            var scan_num = 1
+            i = i + 1
+            selama (scan_num == 1) {
+                jika (i >= len) {
+                    scan_num = 0
+                } lainnya {
+                    var next = char_at(source, i)
+                    jika (is_digit(next)) {
+                        num = num + next
+                        i = i + 1
+                    } lainnya {
+                        scan_num = 0
+                    }
+                }
+            }
+            jika (inside_func == 1) {
+                global_code = global_code + num
+            } lainnya {
+                main_code = main_code + num
+            }
+            need_semi = 1
+        } lainnya jika (is_letter(c)) {
+            var word = c
+            var scan_word = 1
+            i = i + 1
+            selama (scan_word == 1) {
+                jika (i >= len) {
+                    scan_word = 0
+                } lainnya {
+                    var next = char_at(source, i)
+                    jika (is_letter(next)) {
+                        word = word + next
+                        i = i + 1
+                    } lainnya jika (is_digit(next)) {
+                        word = word + next
+                        i = i + 1
+                    } lainnya {
+                        scan_word = 0
+                    }
+                }
+            }
+            
+            // Translate keywords to C
+            jika (sama(word, "var")) {
+                in_var_decl = 1
+                var skip_sp = 1
+                selama (skip_sp == 1) {
+                    jika (i >= len) {
+                        skip_sp = 0
+                    } lainnya {
+                        var next = char_at(source, i)
+                        jika (is_space(next)) {
+                            i = i + 1
+                        } lainnya {
+                            skip_sp = 0
+                        }
+                    }
+                }
+                var_name = ""
+                var read_name = 1
+                selama (read_name == 1) {
+                    jika (i >= len) {
+                        read_name = 0
+                    } lainnya {
+                        var next = char_at(source, i)
+                        jika (is_letter(next)) {
+                            var_name = var_name + next
+                            i = i + 1
+                        } lainnya jika (is_digit(next)) {
+                            var_name = var_name + next
+                            i = i + 1
+                        } lainnya {
+                            read_name = 0
+                        }
+                    }
+                }
+                need_semi = 1
+            } lainnya jika (sama(word, "cetak")) {
+                var skip_sp = 1
+                selama (skip_sp == 1) {
+                    jika (i >= len) {
+                        skip_sp = 0
+                    } lainnya {
+                        var next = char_at(source, i)
+                        jika (is_space(next)) {
+                            i = i + 1
+                        } lainnya {
+                            skip_sp = 0
+                        }
+                    }
+                }
+                var peek_c = char_at(source, i)
+                jika (is_quote(peek_c)) {
+                    jika (inside_func == 1) {
+                        global_code = global_code + "__wear_print_str("
+                    } lainnya {
+                        main_code = main_code + "__wear_print_str("
+                    }
+                    print_type = 1
+                } lainnya jika (is_digit(peek_c)) {
+                    jika (inside_func == 1) {
+                        global_code = global_code + "__wear_print_int("
+                    } lainnya {
+                        main_code = main_code + "__wear_print_int("
+                    }
+                    print_type = 0
+                } lainnya jika (is_letter(peek_c)) {
+                    var peek_word = ""
+                    var peek_i = i
+                    var peek_scan = 1
+                    selama (peek_scan == 1) {
+                        jika (peek_i >= len) {
+                            peek_scan = 0
+                        } lainnya {
+                            var peek_next = char_at(source, peek_i)
+                            jika (is_letter(peek_next)) {
+                                peek_word = peek_word + peek_next
+                                peek_i = peek_i + 1
+                            } lainnya jika (is_digit(peek_next)) {
+                                peek_word = peek_word + peek_next
+                                peek_i = peek_i + 1
+                            } lainnya {
+                                peek_scan = 0
+                            }
+                        }
+                    }
+                    jika (returns_string(peek_word)) {
+                        jika (inside_func == 1) {
+                            global_code = global_code + "__wear_print_str("
+                        } lainnya {
+                            main_code = main_code + "__wear_print_str("
+                        }
+                        print_type = 1
+                    } lainnya jika (is_string_varname(peek_word)) {
+                        jika (inside_func == 1) {
+                            global_code = global_code + "__wear_print_str("
+                        } lainnya {
+                            main_code = main_code + "__wear_print_str("
+                        }
+                        print_type = 1
+                    } lainnya {
+                        jika (inside_func == 1) {
+                            global_code = global_code + "__wear_print_int("
+                        } lainnya {
+                            main_code = main_code + "__wear_print_int("
+                        }
+                        print_type = 0
+                    }
+                } lainnya {
+                    jika (inside_func == 1) {
+                        global_code = global_code + "__wear_print_int("
+                    } lainnya {
+                        main_code = main_code + "__wear_print_int("
+                    }
+                    print_type = 0
+                }
+                in_print = 1
+                need_semi = 1
+            } lainnya jika (sama(word, "selama")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "while"
+                } lainnya {
+                    main_code = main_code + "while"
+                }
+                need_semi = 0
+            } lainnya jika (sama(word, "jika")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "if"
+                } lainnya {
+                    main_code = main_code + "if"
+                }
+                need_semi = 0
+            } lainnya jika (sama(word, "lainnya")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "else"
+                } lainnya {
+                    main_code = main_code + "else"
+                }
+                need_semi = 0
+            } lainnya jika (sama(word, "fungsi")) {
+                // Enter function definition - write to global_code
+                inside_func = 1
+                func_brace_depth = 0
+                
+                // Skip space after fungsi
+                var skip_sp = 1
+                selama (skip_sp == 1) {
+                    jika (i >= len) {
+                        skip_sp = 0
+                    } lainnya {
+                        var next = char_at(source, i)
+                        jika (is_space(next)) {
+                            i = i + 1
+                        } lainnya {
+                            skip_sp = 0
+                        }
+                    }
+                }
+                // Read function name
+                var func_name = ""
+                var read_fn = 1
+                selama (read_fn == 1) {
+                    jika (i >= len) {
+                        read_fn = 0
+                    } lainnya {
+                        var next = char_at(source, i)
+                        jika (is_letter(next)) {
+                            func_name = func_name + next
+                            i = i + 1
+                        } lainnya jika (is_digit(next)) {
+                            func_name = func_name + next
+                            i = i + 1
+                        } lainnya {
+                            read_fn = 0
+                        }
+                    }
+                }
+                global_code = global_code + "int "
+                global_code = global_code + func_name
+                global_code = global_code + "("
+                // Skip to (
+                var skip_to_paren = 1
+                selama (skip_to_paren == 1) {
+                    jika (i >= len) {
+                        skip_to_paren = 0
+                    } lainnya {
+                        var next = char_at(source, i)
+                        jika (sama(next, "(")) {
+                            i = i + 1
+                            skip_to_paren = 0
+                        } lainnya {
+                            i = i + 1
+                        }
+                    }
+                }
+                // Parse parameters
+                var first_param = 1
+                var parse_params = 1
+                selama (parse_params == 1) {
+                    var skip_sp2 = 1
+                    selama (skip_sp2 == 1) {
+                        jika (i >= len) {
+                            skip_sp2 = 0
+                        } lainnya {
+                            var next = char_at(source, i)
+                            jika (is_space(next)) {
+                                i = i + 1
+                            } lainnya {
+                                skip_sp2 = 0
+                            }
+                        }
+                    }
+                    jika (i >= len) {
+                        parse_params = 0
+                    } lainnya {
+                        var peek = char_at(source, i)
+                        jika (sama(peek, ")")) {
+                            parse_params = 0
+                            i = i + 1
+                        } lainnya jika (sama(peek, ",")) {
+                            i = i + 1
+                        } lainnya jika (is_letter(peek)) {
+                            var param_name = ""
+                            var read_param = 1
+                            selama (read_param == 1) {
+                                jika (i >= len) {
+                                    read_param = 0
+                                } lainnya {
+                                    var next = char_at(source, i)
+                                    jika (is_letter(next)) {
+                                        param_name = param_name + next
+                                        i = i + 1
+                                    } lainnya jika (is_digit(next)) {
+                                        param_name = param_name + next
+                                        i = i + 1
+                                    } lainnya {
+                                        read_param = 0
+                                    }
+                                }
+                            }
+                            jika (first_param == 1) {
+                                global_code = global_code + "char* "
+                                global_code = global_code + param_name
+                                first_param = 0
+                            } lainnya {
+                                global_code = global_code + ", char* "
+                                global_code = global_code + param_name
+                            }
+                        } lainnya {
+                            i = i + 1
+                        }
+                    }
+                }
+                global_code = global_code + ")"
+                need_semi = 0
+            } lainnya jika (sama(word, "kembalikan")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "return"
+                } lainnya {
+                    main_code = main_code + "return"
+                }
+                need_semi = 1
+            } lainnya jika (sama(word, "baca_file")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "__wear_read_file"
+                } lainnya {
+                    main_code = main_code + "__wear_read_file"
+                }
+                need_semi = 1
+            } lainnya jika (sama(word, "tulis_file")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "__wear_write_file"
+                } lainnya {
+                    main_code = main_code + "__wear_write_file"
+                }
+                need_semi = 1
+            } lainnya jika (sama(word, "panjang")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "__wear_strlen"
+                } lainnya {
+                    main_code = main_code + "__wear_strlen"
+                }
+                need_semi = 1
+            } lainnya jika (sama(word, "char_at")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "__wear_char_at"
+                } lainnya {
+                    main_code = main_code + "__wear_char_at"
+                }
+                need_semi = 1
+            } lainnya jika (sama(word, "sama")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "__wear_streq"
+                } lainnya {
+                    main_code = main_code + "__wear_streq"
+                }
+                need_semi = 1
+            } lainnya jika (sama(word, "is_quote")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "__wear_is_quote"
+                } lainnya {
+                    main_code = main_code + "__wear_is_quote"
+                }
+                need_semi = 1
+            } lainnya jika (sama(word, "quote_char")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "__wear_quote_char"
+                } lainnya {
+                    main_code = main_code + "__wear_quote_char"
+                }
+                need_semi = 1
+            } lainnya jika (sama(word, "is_newline")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "__wear_is_newline"
+                } lainnya {
+                    main_code = main_code + "__wear_is_newline"
+                }
+                need_semi = 1
+            } lainnya jika (sama(word, "newline_char")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "__wear_newline_char"
+                } lainnya {
+                    main_code = main_code + "__wear_newline_char"
+                }
+                need_semi = 1
+            } lainnya {
+                // Default identifier - check for string concat pattern
+                // Peek ahead to see if + follows
+                var peek_idx = i
+                var found_plus = 0
+                // Skip spaces
+                selama (peek_idx < len) {
+                    var peek_ch = char_at(source, peek_idx)
+                    jika (is_space(peek_ch)) {
+                        peek_idx = peek_idx + 1
+                    } lainnya jika (sama(peek_ch, "+")) {
+                        found_plus = 1
+                        peek_idx = len
+                    } lainnya {
+                        peek_idx = len
+                    }
+                }
+                
+                // If stringy identifier followed by +, use concat
+                jika (found_plus == 1) {
+                    jika (is_string_varname(word)) {
+                        jika (inside_func == 1) {
+                            global_code = global_code + "__wear_concat("
+                            global_code = global_code + word
+                        } lainnya {
+                            main_code = main_code + "__wear_concat("
+                            main_code = main_code + word
+                        }
+                        pending_concat = pending_concat + 1
+                    } lainnya {
+                        jika (inside_func == 1) {
+                            global_code = global_code + word
+                        } lainnya {
+                            main_code = main_code + word
+                        }
+                    }
+                } lainnya {
+                    jika (inside_func == 1) {
+                        global_code = global_code + word
+                    } lainnya {
+                        main_code = main_code + word
+                    }
+                }
+                last_operand = word
+                need_semi = 1
+            }
+        } lainnya {
+            i = i + 1
+        }
+    }
+}
+
+// Handle any remaining semicolon in main code
+jika (need_semi == 1) {
+    jika (in_print == 1) {
+        main_code = main_code + ");"
+    } lainnya {
+        main_code = main_code + ";"
+    }
+}
+
+// FINAL ASSEMBLY: runtime + global_code + main wrapper
+// FINAL ASSEMBLY: runtime + global_code + main wrapper
+var final_output = ""
+final_output = final_output + "/* Generated by WeaR Lang Self-Hosted Transpiler */"
+final_output = final_output + nl
+final_output = final_output + nl
+final_output = final_output + runtime_code
+final_output = final_output + nl
+final_output = final_output + nl
+final_output = final_output + global_code
+final_output = final_output + nl
+final_output = final_output + "int main() {"
+final_output = final_output + nl
+final_output = final_output + main_code
+final_output = final_output + nl
+final_output = final_output + "return 0;"
+final_output = final_output + nl
+final_output = final_output + "}"
+
+// Write output file
+tulis_file("output.c", final_output)
+
+cetak "Generated: output.c"
+cetak "Transpilation complete!"

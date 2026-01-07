@@ -1,0 +1,9 @@
+// WeaR Lang Native Demo - File I/O
+// Test file for Stage-0 Bootstrap Compiler with Standard Library
+
+// Test File I/O
+var konten = "Ini data rahasia dari WeaR Lang"
+tulis_file("rahasia.txt", konten)
+
+var dibaca = baca_file("rahasia.txt")
+cetak "Isi file: " + dibaca

@@ -1,0 +1,11 @@
+// WeaR Lang Native Demo
+// Test file for Stage-0 Bootstrap Compiler
+
+var x = 0
+
+selama (x < 5) {
+    cetak "Hitung native: " + x
+    x = x + 1
+}
+
+cetak "Selesai!"
