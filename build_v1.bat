@@ -24,12 +24,25 @@ echo.
 echo [PREREQUISITE CHECK]
 echo.
 
-if not exist "wearc.exe" (
-    echo ERROR: wearc.exe not found!
-    echo Please build the bootstrap compiler first.
+set BOOTSTRAP_COMPILER=NONE
+
+if exist "wearc.exe" (
+    set BOOTSTRAP_COMPILER=wearc.exe
+    echo   [OK] wearc.exe found (Stage-0 Bootstrap)
+)
+
+if "%BOOTSTRAP_COMPILER%"=="NONE" (
+    if exist "wear.exe" (
+        set BOOTSTRAP_COMPILER=wear.exe
+        echo   [OK] wear.exe found (Self-Hosted Bootstrap)
+    )
+)
+
+if "%BOOTSTRAP_COMPILER%"=="NONE" (
+    echo ERROR: No compiler found!
+    echo Need either 'wearc.exe' [Stage-0] or 'wear.exe' [Previous Version]
     exit /b 1
 )
-echo   [OK] wearc.exe found
 
 if not exist "compiler.wr" (
     echo ERROR: compiler.wr not found!
@@ -57,21 +70,23 @@ echo.
 echo ============================================================
 echo   STEP 1: The Birth (Generation 1)
 echo ============================================================
-echo   Using bootstrap (wearc.exe) to compile compiler.wr...
+echo   Using bootstrap (%BOOTSTRAP_COMPILER%) to compile compiler.wr...
 echo.
 
 :: Step 1: Bootstrap compiles compiler.wr
 copy /y compiler.wr input.wr >nul 2>&1
-wearc.exe compiler.wr -o stage1.c
-
-if errorlevel 1 (
-    echo ERROR: Bootstrap compilation failed!
-    exit /b 1
-)
-
-if not exist "stage1.c" (
-    echo ERROR: stage1.c was not generated!
-    exit /b 1
+%BOOTSTRAP_COMPILER%
+:: wear.exe / wearc.exe produce output.c by default.
+:: We rename it to stage1.c
+if exist "output.c" (
+    move /y output.c stage1.c >nul 2>&1
+) else (
+    if exist "stage1.c" (
+        echo   [NOTE] Using existing stage1.c [bootstrap might have outputted defined name?]
+    ) else (
+        echo ERROR: Bootstrap compilation failed! No output.c generated.
+        exit /b 1
+    )
 )
 
 echo   [OK] stage1.c generated

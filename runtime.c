@@ -151,6 +151,35 @@ void __wear_write_file(const char* filename, const char* content) {
 }
 
 /* ============================================================
+ * Input Operations
+ * ============================================================ */
+
+/* Input from user */
+char* __wear_input(const char* prompt) {
+    if (prompt != NULL && prompt[0] != '\0') {
+        printf("%s", prompt);
+        fflush(stdout);
+    }
+    
+    char* buffer = (char*)malloc(256);
+    if (buffer == NULL) {
+        fprintf(stderr, "Error: Memory allocation failed\n");
+        exit(1);
+    }
+    
+    if (fgets(buffer, 256, stdin) != NULL) {
+        size_t len = strlen(buffer);
+        if (len > 0 && buffer[len-1] == '\n') {
+            buffer[len-1] = '\0';
+        }
+    } else {
+        buffer[0] = '\0';
+    }
+    
+    return buffer;
+}
+
+/* ============================================================
  * Print Operations
  * ============================================================ */
 

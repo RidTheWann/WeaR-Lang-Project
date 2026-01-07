@@ -1,14 +1,4 @@
-# 1. Hapus JavaScript hasil build dari statistik
-web/*.js linguist-generated=true
-docs/*.js linguist-generated=true
-dist/** linguist-generated=true
-*.js linguist-generated=true
-
-# 2. Hapus HTML (UI Playground) dari statistik
-*.html linguist-generated=true
-
-# 3. Hapus CSS (jika ada)
-*.css linguist-generated=true
-
-# 4. Deteksi file .wr sebagai WeaR Lang (Dokumentasi saja)
-*.wr linguist-language=WeaR
+archive/ linguist-vendored
+*.c linguist-generated
+*.h linguist-generated
+*.wr linguist-language=C

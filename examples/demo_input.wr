@@ -1,0 +1,9 @@
+var name = input("Enter your name: ")
+cetak "Hello, " + name + "!"
+
+var lang = input("Favorite language: ")
+jika (sama(lang, "WeaR")) {
+    cetak "Excellent choice!"
+} lainnya {
+    cetak "That's cool too."
+}

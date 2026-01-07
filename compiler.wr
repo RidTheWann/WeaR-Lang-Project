@@ -105,6 +105,7 @@ fungsi returns_string(fn) {
     jika (sama(fn, "char_at")) { kembalikan 1 }
     jika (sama(fn, "quote_char")) { kembalikan 1 }
     jika (sama(fn, "newline_char")) { kembalikan 1 }
+    jika (sama(fn, "input")) { kembalikan 1 }
     kembalikan 0
 }
 
@@ -331,11 +332,34 @@ selama (done == 0) {
             }
             var q = quote_char()
             
+            
+            
+            // Check if + follows string literal (for concatenation)
+            var peek_idx = i
+            var found_plus = 0
+            selama (peek_idx < len) {
+                var peek_ch = char_at(source, peek_idx)
+                jika (is_space(peek_ch)) {
+                    peek_idx = peek_idx + 1
+                } lainnya jika (sama(peek_ch, "+")) {
+                    found_plus = 1
+                    peek_idx = len
+                } lainnya {
+                    peek_idx = len
+                }
+            }
+
             jika (in_var_decl == 1) {
                 jika (inside_func == 1) {
                     global_code = global_code + "char* "
                     global_code = global_code + var_name
                     global_code = global_code + " = "
+                    
+                    jika (found_plus == 1) {
+                        global_code = global_code + "__wear_concat("
+                        pending_concat = pending_concat + 1
+                    }
+                    
                     global_code = global_code + q
                     global_code = global_code + str_content
                     global_code = global_code + q
@@ -343,6 +367,12 @@ selama (done == 0) {
                     main_code = main_code + "char* "
                     main_code = main_code + var_name
                     main_code = main_code + " = "
+                    
+                    jika (found_plus == 1) {
+                        main_code = main_code + "__wear_concat("
+                        pending_concat = pending_concat + 1
+                    }
+
                     main_code = main_code + q
                     main_code = main_code + str_content
                     main_code = main_code + q
@@ -350,10 +380,18 @@ selama (done == 0) {
                 in_var_decl = 0
             } lainnya {
                 jika (inside_func == 1) {
+                    jika (found_plus == 1) {
+                        global_code = global_code + "__wear_concat("
+                        pending_concat = pending_concat + 1
+                    }
                     global_code = global_code + q
                     global_code = global_code + str_content
                     global_code = global_code + q
                 } lainnya {
+                    jika (found_plus == 1) {
+                        main_code = main_code + "__wear_concat("
+                        pending_concat = pending_concat + 1
+                    }
                     main_code = main_code + q
                     main_code = main_code + str_content
                     main_code = main_code + q
@@ -1006,6 +1044,13 @@ selama (done == 0) {
                     global_code = global_code + "__wear_read_file"
                 } lainnya {
                     main_code = main_code + "__wear_read_file"
+                }
+                need_semi = 1
+            } lainnya jika (sama(word, "input")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "__wear_input"
+                } lainnya {
+                    main_code = main_code + "__wear_input"
                 }
                 need_semi = 1
             } lainnya jika (sama(word, "tulis_file")) {
