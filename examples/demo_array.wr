@@ -1,0 +1,11 @@
+var arr = [10, 20, 30]
+cetak "Array created!"
+
+var elem1 = arr[0]
+cetak "First element: " + elem1
+
+var elem3 = arr[2]
+cetak "Third element: " + elem3
+
+arr[1] = 99
+cetak "Modified second element: " + arr[1]

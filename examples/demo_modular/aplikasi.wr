@@ -1,0 +1,9 @@
+impor "matematika.wr"
+
+var hasil = PI_TIMES_100 + E_TIMES_100
+
+cetak "Constant from imported lib:"
+cetak PI_TIMES_100
+
+cetak "Sum of PI*100 + E*100:"
+cetak hasil

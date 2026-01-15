@@ -106,6 +106,7 @@ fungsi returns_string(fn) {
     jika (sama(fn, "quote_char")) { kembalikan 1 }
     jika (sama(fn, "newline_char")) { kembalikan 1 }
     jika (sama(fn, "input")) { kembalikan 1 }
+    jika (sama(fn, "process_imports")) { kembalikan 1 }
     kembalikan 0
 }
 
@@ -232,11 +233,113 @@ fungsi is_string_varname(name) {
     kembalikan 0
 }
 
+// Pre-processor: Recursively inline all imports
+fungsi process_imports(src) {
+    var buffer = ""
+    var idx = 0
+    var total = panjang(src)
+    var at_line_start = 1
+    
+    selama (idx < total) {
+        var ch = char_at(src, idx)
+        
+        // Track newlines for line-start detection
+        jika (is_newline(ch)) {
+            buffer = buffer + ch
+            idx = idx + 1
+            at_line_start = 1
+        } lainnya jika (is_space(ch)) {
+            buffer = buffer + ch
+            idx = idx + 1
+            // Stay at_line_start if we were already
+        } lainnya jika (sama(ch, "i")) {
+            // Only check for 'impor' at line start
+            jika (at_line_start == 1) {
+                // Peek ahead for "impor"
+                var word = ""
+                var j = idx
+                selama (j < total) {
+                    var jc = char_at(src, j)
+                    jika (is_letter(jc)) {
+                        word = word + jc
+                        j = j + 1
+                    } lainnya {
+                        j = total
+                    }
+                }
+                
+                jika (sama(word, "impor")) {
+                    // Skip 'impor' keyword (5 chars)
+                    idx = idx + 5
+                    
+                    // Skip whitespace
+                    var skipping = 1
+                    selama (skipping == 1) {
+                        jika (idx >= total) {
+                            skipping = 0
+                        } lainnya {
+                            var wc = char_at(src, idx)
+                            jika (is_space(wc)) {
+                                idx = idx + 1
+                            } lainnya {
+                                skipping = 0
+                            }
+                        }
+                    }
+                    
+                    // Expect opening quote
+                    var qc = char_at(src, idx)
+                    jika (is_quote(qc)) {
+                        idx = idx + 1
+                        var filename = ""
+                        var reading = 1
+                        selama (reading == 1) {
+                            jika (idx >= total) {
+                                reading = 0
+                            } lainnya {
+                                var fc = char_at(src, idx)
+                                jika (is_quote(fc)) {
+                                    reading = 0
+                                    idx = idx + 1
+                                } lainnya {
+                                    filename = filename + fc
+                                    idx = idx + 1
+                                }
+                            }
+                        }
+                        
+                        // Read and process the imported file
+                        var lib = baca_file(filename)
+                        var content = process_imports(lib)
+                        buffer = buffer + content
+                        buffer = buffer + newline_char()
+                    }
+                } lainnya {
+                    buffer = buffer + ch
+                    idx = idx + 1
+                    at_line_start = 0
+                }
+            } lainnya {
+                buffer = buffer + ch
+                idx = idx + 1
+                at_line_start = 0
+            }
+        } lainnya {
+            buffer = buffer + ch
+            idx = idx + 1
+            at_line_start = 0
+        }
+    }
+    
+    kembalikan buffer
+}
+
 // Main Transpiler Program
 cetak "=== WeaR Lang Self-Hosted Transpiler ==="
 cetak "Reading: input.wr"
 
-var source = baca_file("input.wr")
+var raw_src = baca_file("input.wr")
+var source = process_imports(raw_src)
 var len = panjang(source)
 var i = 0
 var done = 0
@@ -954,7 +1057,11 @@ selama (done == 0) {
                         }
                     }
                 }
-                global_code = global_code + "int "
+                jika (returns_string(func_name)) {
+                    global_code = global_code + "char* "
+                } lainnya {
+                    global_code = global_code + "int "
+                }
                 global_code = global_code + func_name
                 global_code = global_code + "("
                 // Skip to (
@@ -1017,12 +1124,79 @@ selama (done == 0) {
                                     }
                                 }
                             }
+                            
+                            // Check for type annotation (: int or : str)
+                            var ptype = ""
+                            var skip_ws = 1
+                            selama (skip_ws == 1) {
+                                jika (i >= len) {
+                                    skip_ws = 0
+                                } lainnya {
+                                    var wc = char_at(source, i)
+                                    jika (is_space(wc)) {
+                                        i = i + 1
+                                    } lainnya {
+                                        skip_ws = 0
+                                    }
+                                }
+                            }
+                            
+                            var colon_ch = char_at(source, i)
+                            jika (sama(colon_ch, ":")) {
+                                i = i + 1
+                                // Skip whitespace after :
+                                var skip_ws2 = 1
+                                selama (skip_ws2 == 1) {
+                                    jika (i >= len) {
+                                        skip_ws2 = 0
+                                    } lainnya {
+                                        var wc2 = char_at(source, i)
+                                        jika (is_space(wc2)) {
+                                            i = i + 1
+                                        } lainnya {
+                                            skip_ws2 = 0
+                                        }
+                                    }
+                                }
+                                // Parse type name
+                                var read_type = 1
+                                selama (read_type == 1) {
+                                    jika (i >= len) {
+                                        read_type = 0
+                                    } lainnya {
+                                        var tc = char_at(source, i)
+                                        jika (is_letter(tc)) {
+                                            ptype = ptype + tc
+                                            i = i + 1
+                                        } lainnya {
+                                            read_type = 0
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Determine C type based on annotation or fallback
+                            var ctype_str = ""
+                            jika (sama(ptype, "int")) {
+                                ctype_str = "int "
+                            } lainnya jika (sama(ptype, "str")) {
+                                ctype_str = "char* "
+                            } lainnya {
+                                // Fallback to heuristic
+                                jika (is_string_varname(param_name)) {
+                                    ctype_str = "char* "
+                                } lainnya {
+                                    ctype_str = "int "
+                                }
+                            }
+                            
                             jika (first_param == 1) {
-                                global_code = global_code + "char* "
+                                global_code = global_code + ctype_str
                                 global_code = global_code + param_name
                                 first_param = 0
                             } lainnya {
-                                global_code = global_code + ", char* "
+                                global_code = global_code + ", "
+                                global_code = global_code + ctype_str
                                 global_code = global_code + param_name
                             }
                         } lainnya {
@@ -1194,3 +1368,5 @@ tulis_file("output.c", final_output)
 
 cetak "Generated: output.c"
 cetak "Transpilation complete!"
+
+

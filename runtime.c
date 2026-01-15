@@ -8,13 +8,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 /* ============================================================
+ * Array Operations
+ * ============================================================ */
+
+/* Create integer array dynamically */
+int* __wear_create_int_array(int count, ...) {
+    int* arr = (int*)malloc(count * sizeof(int));
+    if (arr == NULL) {
+        fprintf(stderr, "Error: Memory allocation failed\n");
+        exit(1);
+    }
+    
+    va_list args;
+    va_start(args, count);
+    for (int i = 0; i < count; i++) {
+        arr[i] = va_arg(args, int);
+    }
+    va_end(args);
+    
+    return arr;
+}
+
+/* ============================================================ 
  * String Operations
  * ============================================================ */
 
-/* String concatenation helper */
-char* __wear_concat(const char* a, const char* b) {
+/* Implementation of string + string */
+char* __wear_concat_impl(const char* a, const char* b) {
     size_t len_a = strlen(a);
     size_t len_b = strlen(b);
     char* result = (char*)malloc(len_a + len_b + 1);
@@ -41,10 +64,17 @@ char* __wear_int_to_str(int value) {
 /* String + int concatenation */
 char* __wear_concat_str_int(const char* s, int n) {
     char* num_str = __wear_int_to_str(n);
-    char* result = __wear_concat(s, num_str);
+    char* result = __wear_concat_impl(s, num_str);
     free(num_str);
     return result;
 }
+
+/* Generic macro for overload */
+#define __wear_concat(a, b) _Generic((b), \
+    int: __wear_concat_str_int, \
+    char*: __wear_concat_impl, \
+    const char*: __wear_concat_impl \
+)(a, b)
 
 /* Int + string concatenation */
 char* __wear_concat_int_str(int n, const char* s) {
@@ -194,3 +224,14 @@ void __wear_print_int(int n) {
 }
 
 /* ============================================================ */
+
+/* Forward declarations for self-hosted compiler functions */
+char* process_imports(char* src);
+int is_string_varname(char* name);
+int returns_string(char* fn);
+int returns_int(char* fn);
+int is_quote(char* c);
+int is_newline(char* c);
+int is_digit(char* c);
+int is_letter(char* c);
+int is_space(char* c);

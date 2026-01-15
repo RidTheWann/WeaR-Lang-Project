@@ -1,0 +1,5 @@
+// matematika.wr - Library for math operations (v1.3 compatible)
+// Note: Using direct arithmetic to avoid parameter type inference limitations
+
+var PI_TIMES_100 = 314
+var E_TIMES_100 = 271

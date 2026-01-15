@@ -1,0 +1,10 @@
+// Fungsi dengan tipe data eksplisit
+fungsi hitung_luas(pj: int, lb: int) {
+    kembalikan pj * lb
+}
+
+var p = 10
+var l = 5
+var luas = hitung_luas(p, l)
+
+cetak "Luas Tanah: " + luas
