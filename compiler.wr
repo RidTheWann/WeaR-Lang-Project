@@ -877,6 +877,9 @@ selama (done == 0) {
                     } lainnya jika (is_digit(next)) {
                         word = word + next
                         i = i + 1
+                    } lainnya jika (sama(next, "_")) {
+                        word = word + next
+                        i = i + 1
                     } lainnya {
                         scan_word = 0
                     }
@@ -1018,6 +1021,13 @@ selama (done == 0) {
                     global_code = global_code + "else"
                 } lainnya {
                     main_code = main_code + "else"
+                }
+                need_semi = 0
+            } lainnya jika (sama(word, "tapi_jika")) {
+                jika (inside_func == 1) {
+                    global_code = global_code + "else if"
+                } lainnya {
+                    main_code = main_code + "else if"
                 }
                 need_semi = 0
             } lainnya jika (sama(word, "fungsi")) {
