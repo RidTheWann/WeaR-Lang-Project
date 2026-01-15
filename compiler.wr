@@ -347,7 +347,8 @@ var done = 0
 cetak "Loading: runtime.c"
 var runtime_code = baca_file("runtime.c")
 
-// DUAL-BUFFER OUTPUT SYSTEM
+// TRIPLE-BUFFER OUTPUT SYSTEM
+var global_protos = ""
 var global_code = ""
 var main_code = ""
 var nl = newline_char()
@@ -1057,13 +1058,21 @@ selama (done == 0) {
                         }
                     }
                 }
+                // Build return type
+                var ret_str = ""
                 jika (returns_string(func_name)) {
-                    global_code = global_code + "char* "
+                    ret_str = "char* "
                 } lainnya {
-                    global_code = global_code + "int "
+                    ret_str = "int "
                 }
+                global_code = global_code + ret_str
                 global_code = global_code + func_name
                 global_code = global_code + "("
+                
+                // Start building prototype
+                var global_proto = ret_str
+                global_proto = global_proto + func_name
+                global_proto = global_proto + "("
                 // Skip to (
                 var skip_to_paren = 1
                 selama (skip_to_paren == 1) {
@@ -1126,7 +1135,7 @@ selama (done == 0) {
                             }
                             
                             // Check for type annotation (: int or : str)
-                            var ptype = ""
+                            var code_tval = ""
                             var skip_ws = 1
                             selama (skip_ws == 1) {
                                 jika (i >= len) {
@@ -1166,7 +1175,7 @@ selama (done == 0) {
                                     } lainnya {
                                         var tc = char_at(source, i)
                                         jika (is_letter(tc)) {
-                                            ptype = ptype + tc
+                                            code_tval = code_tval + tc
                                             i = i + 1
                                         } lainnya {
                                             read_type = 0
@@ -1177,9 +1186,9 @@ selama (done == 0) {
                             
                             // Determine C type based on annotation or fallback
                             var ctype_str = ""
-                            jika (sama(ptype, "int")) {
+                            jika (sama(code_tval, "int")) {
                                 ctype_str = "int "
-                            } lainnya jika (sama(ptype, "str")) {
+                            } lainnya jika (sama(code_tval, "str")) {
                                 ctype_str = "char* "
                             } lainnya {
                                 // Fallback to heuristic
@@ -1193,11 +1202,16 @@ selama (done == 0) {
                             jika (first_param == 1) {
                                 global_code = global_code + ctype_str
                                 global_code = global_code + param_name
+                                global_proto = global_proto + ctype_str
+                                global_proto = global_proto + param_name
                                 first_param = 0
                             } lainnya {
                                 global_code = global_code + ", "
                                 global_code = global_code + ctype_str
                                 global_code = global_code + param_name
+                                global_proto = global_proto + ", "
+                                global_proto = global_proto + ctype_str
+                                global_proto = global_proto + param_name
                             }
                         } lainnya {
                             i = i + 1
@@ -1205,6 +1219,9 @@ selama (done == 0) {
                     }
                 }
                 global_code = global_code + ")"
+                // Finalize and store prototype
+                global_proto = global_proto + ");" + nl
+                global_protos = global_protos + global_proto
                 need_semi = 0
             } lainnya jika (sama(word, "kembalikan")) {
                 jika (inside_func == 1) {
@@ -1353,6 +1370,10 @@ final_output = final_output + nl
 final_output = final_output + runtime_code
 final_output = final_output + nl
 final_output = final_output + nl
+final_output = final_output + "/* Function Prototypes */" + nl
+final_output = final_output + global_protos
+final_output = final_output + nl
+final_output = final_output + "/* Function Definitions */" + nl
 final_output = final_output + global_code
 final_output = final_output + nl
 final_output = final_output + "int main() {"
@@ -1368,5 +1389,11 @@ tulis_file("output.c", final_output)
 
 cetak "Generated: output.c"
 cetak "Transpilation complete!"
+
+
+
+
+
+
 
 
