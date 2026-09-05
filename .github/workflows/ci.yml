@@ -9,40 +9,43 @@ on:
     branches:
       - main
       - development
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  native-smoke-test:
-    name: Native compiler smoke test
+  native-regression:
+    name: Native compiler regression suite
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build Stage-0 compiler
-        run: gcc -std=c11 -Wall -Wextra -O2 compiler.c -o wear-stage0
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc
 
-      - name: Verify Stage-0 compiler output
+      - name: Run native regression suite
+        run: bash tests/run_regression.sh
+
+  repository-hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for tracked generated compiler output
         run: |
-          cp compiler.wr input.wr
-          ./wear-stage0
-          test -s output.c
-          mv output.c stage1.c
+          if git ls-files | grep -E '(^|/)(output\.c|stage[0-9]*\.c|.*\.o|wear-smoke)$'; then
+            echo 'Generated build artifacts must not be tracked.'
+            exit 1
+          fi
 
-      - name: Build self-hosted Stage-1 compiler
-        run: gcc -std=c11 -Wall -Wextra -O2 stage1.c -o wear-stage1
-
-      - name: Compile minimal WeaR program with Stage-1
+      - name: Check required development docs
         run: |
-          cp tests/smoke.wr input.wr
-          ./wear-stage1
-          test -s output.c
-
-      - name: Build generated native program
-        run: gcc -std=c11 -Wall -Wextra -O2 output.c -o wear-smoke
-
-      - name: Run generated native program
-        run: ./wear-smoke
+          test -s README.md
+          test -s PROGRESS.md
+          test -s SECURITY.md
