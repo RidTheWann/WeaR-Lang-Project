@@ -1,0 +1,7 @@
+// Function-definition and return regression
+fungsi konstanta() {
+    kembalikan 42
+}
+
+var answer = konstanta()
+cetak answer
