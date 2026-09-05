@@ -4,6 +4,13 @@ node_modules/
 # Build output
 dist/
 
+# WeaR generated/intermediate artifacts
+output.c
+stage*.c
+compiler_gen*.exe
+hello*.exe
+*.o
+
 # IDE
 .vscode/
 .idea/
