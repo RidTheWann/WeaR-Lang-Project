@@ -1,0 +1,5 @@
+// Basic literals and variables
+var message = "WeaR Lang regression: basic OK"
+var answer = 42
+cetak message
+cetak answer
