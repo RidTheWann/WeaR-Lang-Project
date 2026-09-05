@@ -17,6 +17,7 @@ The repository currently contains:
 - `compiler.wr` — self-hosted Stage-1 compiler source.
 - `runtime.c` — C runtime helpers used by generated programs.
 - `examples/` — language examples and regression inputs.
+- `tests/` — native regression cases and CI runner.
 - `docs/` — browser playground and static web assets.
 - `archive/stage0_bootstrap/` — historical bootstrap artifacts.
 
@@ -35,11 +36,17 @@ Run:
 build_v1.bat
 ```
 
-The bootstrap script builds a self-hosted compiler and runs a basic validation program.
+The bootstrap script builds a self-hosted compiler and performs the project's current bootstrap validation.
 
-### Native smoke test
+### Native regression suite
 
-GitHub Actions builds `compiler.c`, transpiles `examples/demo.wr`, compiles the generated C with GCC, and runs the resulting program.
+The CI-native regression suite builds `compiler.c` with GCC, runs it against representative WeaR programs, compiles the generated C, and executes the resulting native programs. The suite currently covers literals/variables, control flow, and function returns.
+
+```bash
+bash tests/run_regression.sh
+```
+
+The complete Stage-0 → Stage-1 bootstrap is intentionally not a required CI gate yet because `compiler.c` and the current `compiler.wr` still have known semantic drift. See GitHub issue #1 for the synchronization work.
 
 ## Using WeaR
 
@@ -79,7 +86,7 @@ The static playground lives in `docs/` and can be deployed directly to GitHub Pa
 
 ## Development workflow
 
-Use `development` for compiler/runtime changes and validation. Merge to `main` only after the CI smoke test and self-hosting bootstrap succeed.
+Use `development` for compiler/runtime changes and validation. Merge to `main` only after the native regression suite is green and the Stage-0/Stage-1 bootstrap has been verified.
 
 ## Security
 
