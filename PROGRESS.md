@@ -13,6 +13,8 @@
 
 **Current phase:** Core compiler stabilization and self-hosting hardening
 
+**Current engineering focus:** Establish a dependable native regression baseline, harden the runtime, then synchronize Stage-0 with the current self-hosted compiler.
+
 ---
 
 ## Completed
@@ -25,14 +27,23 @@
 - [x] Remove the tracked `rahasia.txt` test artifact from the active codebase.
 
 ### Tooling & CI
-- [x] Add a native compiler smoke-test workflow.
-- [x] Add a minimal WeaR smoke program under `tests/`.
-- [x] Begin repository hygiene improvements for generated artifacts.
+- [x] Add a native compiler regression workflow for `development` and `main`.
+- [x] Add a maintainable regression runner under `tests/run_regression.sh`.
+- [x] Add baseline regression cases for literals/variables, control flow, and functions.
+- [x] Add repository hygiene checks for generated build artifacts and required project docs.
+- [x] Add manual workflow dispatch support for CI.
 - [x] Document the development/stable branch model.
+
+### Runtime
+- [x] Harden string allocation and concatenation against null inputs and size overflow.
+- [x] Harden file reads/writes with seek, size, and I/O error checks.
+- [x] Replace the fixed-size input buffer with dynamically growing input storage.
+- [x] Improve runtime error reporting for allocation and I/O failures.
 
 ### Documentation
 - [x] Improve README guidance for the native compiler workflow.
 - [x] Create this persistent progress tracker.
+- [x] Record the current Stage-0/Stage-1 synchronization blocker as GitHub issue #1.
 
 ---
 
@@ -50,19 +61,15 @@
 - [ ] Prove bootstrap reproducibility across consecutive generations.
 - [ ] Add automated comparison of generated compiler output between bootstrap stages.
 - [ ] Reduce reliance on generated/manual synchronization between `compiler.c` and `compiler.wr`.
-
-### Runtime
-- [ ] Audit allocation ownership and temporary string lifetime.
-- [ ] Harden file I/O error handling.
-- [ ] Review array helpers and bounds behavior.
-- [ ] Consolidate duplicated runtime helpers.
+- [ ] Re-enable self-hosting as a required CI gate after Stage-0/Stage-1 synchronization is complete.
 
 ### Testing
-- [ ] Expand smoke tests into a regression suite.
-- [ ] Add tests for variables, arithmetic, strings, arrays, functions, conditionals, loops, imports, and input.
+- [ ] Verify the complete native regression suite in GitHub Actions.
+- [ ] Add tests for strings and concatenation edge cases.
+- [ ] Add tests for arrays, imports, and input.
 - [ ] Add negative tests for syntax/type errors.
 - [ ] Add bootstrap/self-hosting tests.
-- [ ] Add generated-C compilation tests with strict warnings.
+- [ ] Add generated-C compilation tests with a strict warning policy.
 
 ### CLI & developer experience
 - [ ] Design a proper CLI instead of relying on `input.wr`/`output.c` defaults.
@@ -120,7 +127,7 @@
 
 ### M0 — Repository Stabilization
 - [x] Development branch workflow
-- [x] Basic CI smoke coverage
+- [x] Basic CI/regression coverage
 - [x] Security/repository hygiene baseline
 - [ ] Clean documentation baseline
 
@@ -128,7 +135,7 @@
 - [ ] Compiler/parser audit
 - [ ] Deterministic type handling
 - [ ] Diagnostics with line/column
-- [ ] Regression suite
+- [ ] Regression suite verified in CI
 
 ### M2 — Self-Hosting Hardening
 - [ ] Reproducible bootstrap
@@ -161,3 +168,7 @@
 - Added `PROGRESS.md` as the persistent development roadmap and engineering memory for WeaR Lang.
 - Recorded repository stabilization work completed so far.
 - Defined compiler, self-hosting, runtime, testing, CLI, playground, and release milestones.
+- Replaced the previous CI bootstrap smoke flow with a maintainable native regression suite while Stage-0/Stage-1 synchronization remains unresolved.
+- Added regression cases for basic variables/literals, control flow, and function return behavior.
+- Hardened `runtime.c` memory, input, and file-I/O handling.
+- Opened GitHub issue #1 to track Stage-0/Stage-1 semantic synchronization and bootstrap reproducibility.
