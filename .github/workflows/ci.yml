@@ -1,0 +1,48 @@
+name: WeaR Lang CI
+
+on:
+  push:
+    branches:
+      - main
+      - development
+  pull_request:
+    branches:
+      - main
+      - development
+
+permissions:
+  contents: read
+
+jobs:
+  native-smoke-test:
+    name: Native compiler smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Stage-0 compiler
+        run: gcc -std=c11 -Wall -Wextra -O2 compiler.c -o wear-stage0
+
+      - name: Verify Stage-0 compiler output
+        run: |
+          cp compiler.wr input.wr
+          ./wear-stage0
+          test -s output.c
+          mv output.c stage1.c
+
+      - name: Build self-hosted Stage-1 compiler
+        run: gcc -std=c11 -Wall -Wextra -O2 stage1.c -o wear-stage1
+
+      - name: Compile minimal WeaR program with Stage-1
+        run: |
+          cp tests/smoke.wr input.wr
+          ./wear-stage1
+          test -s output.c
+
+      - name: Build generated native program
+        run: gcc -std=c11 -Wall -Wextra -O2 output.c -o wear-smoke
+
+      - name: Run generated native program
+        run: ./wear-smoke
