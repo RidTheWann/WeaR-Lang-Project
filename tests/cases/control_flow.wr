@@ -1,0 +1,12 @@
+// Conditional and loop regression
+var n = 3
+selama (n > 0) {
+    cetak n
+    n = n - 1
+}
+
+jika (n == 0) {
+    cetak "WeaR Lang regression: control OK"
+} lainnya {
+    cetak "WeaR Lang regression: control FAIL"
+}
