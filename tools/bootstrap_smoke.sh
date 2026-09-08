@@ -25,16 +25,16 @@ run_stage0() {
 }
 
 log "Preparing isolated bootstrap workspace"
-# compiler.c now hosts the native-symbol integration facade. The canonical
-# self-hosting compiler is still emitted by the mature backend copied as
-# compiler_legacy.c; using that backend here keeps the Stage-1/Stage-2
-# reproducibility gate isolated from the in-progress native frontend migration.
-cp "$ROOT_DIR/compiler_legacy.c" "$WORK_DIR/compiler.c"
+cp "$ROOT_DIR/compiler.c" "$WORK_DIR/compiler.c"
+cp "$ROOT_DIR/compiler_legacy.c" "$WORK_DIR/compiler_legacy.c"
 cp "$ROOT_DIR/compiler.wr" "$WORK_DIR/compiler.wr"
 cp "$ROOT_DIR/runtime.c" "$WORK_DIR/runtime.c"
+mkdir -p "$WORK_DIR/tools"
+cp "$ROOT_DIR/tools/native_symbol_table.h" "$WORK_DIR/tools/native_symbol_table.h"
+cp "$ROOT_DIR/tools/native_types.h" "$WORK_DIR/tools/native_types.h"
 
-log "[1/5] Building Stage-0 bootstrap compiler"
-if ! $CC $CFLAGS "$WORK_DIR/compiler.c" -o "$WORK_DIR/stage0" 2>"$WORK_DIR/stage0-build-warnings.log"; then
+log "[1/5] Building Stage-0 native compiler"
+if ! $CC $CFLAGS "$WORK_DIR/compiler.c" "$ROOT_DIR/tools/native_symbol_table.c" -o "$WORK_DIR/stage0" 2>"$WORK_DIR/stage0-build-warnings.log"; then
     cat "$WORK_DIR/stage0-build-warnings.log"
     printf '\nBootstrap failed while building Stage-0 compiler.\n' >&2
     exit 1

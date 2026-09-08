@@ -1,11 +1,11 @@
 /* WeaR Lang Stage-0 compiler entrypoint.
  *
- * The historical transpiler is kept in compiler_legacy.c while this entrypoint
- * performs the native semantic symbol pass first. The pass uses the canonical
- * native symbol table to assign deterministic internal names to variables, then
- * feeds the rewritten source to the mature Stage-0 backend. This removes the
- * old variable-name heuristic from the correctness path without changing the
- * backend's established code-generation behavior.
+ * Native semantic symbols are collected before the mature Stage-0 backend runs.
+ * String symbols receive deterministic backend-safe aliases from the native
+ * symbol table; integer symbols retain their source identifiers because the
+ * legacy backend already treats them conservatively as integers. This keeps
+ * native type information on the correctness path while avoiding broad
+ * identifier rewriting of the self-hosting compiler's integer bookkeeping.
  */
 
 #include <stdio.h>
@@ -240,8 +240,8 @@ static const char *native_alias_for(const char *src, size_t start, size_t end,
 
     for (i = native_symbol_count; i > 0; --i) {
         const WearSymbol *symbol = &native_symbols[i - 1];
-        if (symbol->name == NULL || symbol->scope == NULL ||
-            symbol->internal_name == NULL) {
+        if (symbol->type != WEAR_TYPE_STR || symbol->name == NULL ||
+            symbol->scope == NULL || symbol->internal_name == NULL) {
             continue;
         }
         if (strlen(symbol->name) != name_len ||
@@ -440,9 +440,7 @@ static int collect_native_symbols(const char *src, size_t len) {
             }
         }
 
-        if (src[end] == '\n' || src[end] == '\r') {
-            ++line;
-        }
+        pos = end;
     }
     return 1;
 }
@@ -542,7 +540,7 @@ static int rewrite_source(const char *src, size_t len, char **out_source,
             const char *alias = NULL;
             skip_space_and_comments(src, len, &next);
             if (next < len && src[next] == '(') {
-                alias = NULL; /* Function call / builtin: keep canonical name. */
+                alias = NULL;
             } else {
                 alias = native_alias_for(src, start, end, scope);
             }
