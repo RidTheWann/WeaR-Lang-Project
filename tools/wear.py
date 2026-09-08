@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """WeaR Lang command-line frontend.
 
-The native compiler is intentionally kept isolated from the user's working
-files. The frontend stages compiler.c and runtime.c into a temporary build
-workspace, invokes GCC, and copies the generated executable source to the
-requested destination.
+The frontend isolates compiler artifacts in a temporary workspace and provides
+one stable entry point for source validation, transpilation, and native builds.
+Semantic validation is performed before invoking the legacy Stage-0 compiler;
+this gives users deterministic diagnostics while the self-hosted compiler is
+being migrated away from identifier-name heuristics.
 """
 
 from __future__ import annotations
@@ -17,6 +18,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from semantic_contract import check_source
+
 VERSION = "1.1-dev"
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_COMPILER = ROOT / "compiler.c"
@@ -27,6 +30,7 @@ EXIT_USAGE = 2
 EXIT_TOOLCHAIN = 3
 EXIT_COMPILE = 4
 EXIT_RUNTIME = 5
+EXIT_SEMANTIC = 6
 
 
 def fail(message: str, code: int) -> int:
@@ -45,15 +49,15 @@ def require_file(path: Path, label: str) -> None:
 
 def run_process(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
     try:
-        return subprocess.run(
-            command,
-            cwd=cwd,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
+        return subprocess.run(command, cwd=cwd, text=True, capture_output=True, check=False)
     except OSError as exc:
         raise RuntimeError(f"failed to start {' '.join(command)}: {exc}") from exc
+
+
+def validate_source(source: Path) -> None:
+    errors = check_source(source)
+    if errors:
+        raise ValueError("\n".join(errors))
 
 
 def build_stage0(compiler_source: Path, runtime_source: Path, cc: str, workdir: Path) -> Path:
@@ -76,9 +80,7 @@ def transpile(compiler_exe: Path, source: Path, workdir: Path) -> Path:
     shutil.copy2(source, workdir / "input.wr")
     result = run_process([str(compiler_exe)], cwd=workdir)
     if result.returncode != 0:
-        diagnostics = "\n".join(
-            part for part in (result.stdout.strip(), result.stderr.strip()) if part
-        )
+        diagnostics = "\n".join(part for part in (result.stdout.strip(), result.stderr.strip()) if part)
         raise RuntimeError(f"WeaR compilation failed\n{diagnostics}")
 
     generated = workdir / "output.c"
@@ -101,10 +103,14 @@ def compile_source(
     runtime_source: Path,
     cc: str,
     keep_c: bool,
+    skip_semantic: bool,
 ) -> Path:
     require_file(source, "source file")
     require_file(compiler_source, "compiler source")
     require_file(runtime_source, "runtime source")
+
+    if not skip_semantic:
+        validate_source(source)
 
     output = output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -116,8 +122,7 @@ def compile_source(
         shutil.copy2(generated, output)
 
         if keep_c:
-            generated_copy = output.with_suffix(output.suffix + ".c")
-            shutil.copy2(generated, generated_copy)
+            shutil.copy2(generated, output.with_suffix(output.suffix + ".c"))
 
     return output
 
@@ -131,9 +136,12 @@ def command_compile(args: argparse.Namespace) -> int:
             runtime_source=Path(args.runtime),
             cc=args.cc,
             keep_c=args.keep_c,
+            skip_semantic=args.no_semantic_check,
         )
     except FileNotFoundError as exc:
         return fail(str(exc), EXIT_USAGE)
+    except ValueError as exc:
+        return fail(f"semantic validation failed\n{exc}", EXIT_SEMANTIC)
     except RuntimeError as exc:
         return fail(str(exc), EXIT_COMPILE)
 
@@ -147,8 +155,12 @@ def command_run(args: argparse.Namespace) -> int:
         require_file(source, "source file")
         require_file(Path(args.compiler), "compiler source")
         require_file(Path(args.runtime), "runtime source")
+        if not args.no_semantic_check:
+            validate_source(source)
     except FileNotFoundError as exc:
         return fail(str(exc), EXIT_USAGE)
+    except ValueError as exc:
+        return fail(f"semantic validation failed\n{exc}", EXIT_SEMANTIC)
 
     cc = args.cc
     if not find_tool(cc):
@@ -167,7 +179,10 @@ def command_run(args: argparse.Namespace) -> int:
                 runtime_source=Path(args.runtime),
                 cc=cc,
                 keep_c=False,
+                skip_semantic=args.no_semantic_check,
             )
+        except ValueError as exc:
+            return fail(f"semantic validation failed\n{exc}", EXIT_SEMANTIC)
         except RuntimeError as exc:
             return fail(str(exc), EXIT_COMPILE)
 
@@ -181,6 +196,10 @@ def command_run(args: argparse.Namespace) -> int:
         except OSError as exc:
             return fail(f"failed to launch native program: {exc}", EXIT_RUNTIME)
         return result.returncode
+
+
+def add_common_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--no-semantic-check", action="store_true", help="skip the deterministic source semantic preflight")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -199,11 +218,13 @@ def build_parser() -> argparse.ArgumentParser:
     compile_cmd.add_argument("source", help="input .wr file")
     compile_cmd.add_argument("-o", "--output", required=True, help="generated C output path")
     compile_cmd.add_argument("--keep-c", action="store_true", help="also preserve a <output>.c copy")
+    add_common_options(compile_cmd)
     compile_cmd.set_defaults(handler=command_compile)
 
     run_cmd = sub.add_parser("run", help="compile a .wr source and execute the native program")
     run_cmd.add_argument("source", help="input .wr file")
     run_cmd.add_argument("program_args", nargs=argparse.REMAINDER, help="arguments passed to the native program")
+    add_common_options(run_cmd)
     run_cmd.set_defaults(handler=command_run)
 
     return parser
