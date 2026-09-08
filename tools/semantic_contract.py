@@ -265,7 +265,7 @@ def expression_type(
             types = [expression_type(part, symbols, functions) for part in parts]
             if ERROR in types:
                 return ERROR
-            if operator == "+" and STR in types:
+            if operator == "+" and STR in types and all(item in {STR, INT, UNKNOWN} for item in types):
                 return STR
             if all(item == INT for item in types):
                 return INT
@@ -312,15 +312,28 @@ def _collect_functions(lines: list[str]) -> dict[str, FunctionSignature]:
                 saw_body = True
             if saw_body:
                 match = RETURN_RE.match(text)
-                if match and match.group(1):
-                    result = expression_type(match.group(1), local, functions)
-                    if result in {INT, STR}:
+                if match:
+                    expr = match.group(1) or ""
+                    result = INT if not expr else expression_type(expr, local, functions)
+                    if result in {INT, STR, ERROR}:
                         return_types.add(result)
             if saw_body and depth <= 0:
                 break
-        inferred = STR if STR in return_types else INT
+        if ERROR in return_types or len(return_types) > 1:
+            inferred = ERROR
+        elif len(return_types) == 1:
+            inferred = next(iter(return_types))
+        else:
+            inferred = UNKNOWN
         functions[name] = FunctionSignature(inferred, signature.params, start_line)
     return functions
+
+
+def _visible_symbols(global_symbols: dict[str, Symbol], local_symbols: dict[str, Symbol] | None) -> dict[str, Symbol]:
+    visible = dict(global_symbols)
+    if local_symbols is not None:
+        visible.update(local_symbols)
+    return visible
 
 
 def check_source(path: str | Path) -> list[str]:
@@ -357,8 +370,9 @@ def check_source(path: str | Path) -> list[str]:
             brace_depth = stripped.count("{") - stripped.count("}")
             continue
 
-        symbols = local_symbols if active_function else global_symbols
-        brace_depth += stripped.count("{") - stripped.count("}") if active_function else 0
+        symbols = _visible_symbols(global_symbols, local_symbols if active_function else None)
+        if active_function:
+            brace_depth += stripped.count("{") - stripped.count("}")
 
         match = VAR_RE.match(stripped)
         if match:
@@ -400,7 +414,7 @@ def check_source(path: str | Path) -> list[str]:
             expected = functions.get(active_function, FunctionSignature(INT)).return_type
             if value_type in {UNKNOWN, ERROR}:
                 diagnostics.append(Diagnostic(lineno, max(1, line.find("kembalikan") + 1), f"cannot resolve return expression type in '{active_function}'"))
-            elif expected != UNKNOWN and value_type != expected:
+            elif expected != UNKNOWN and expected != ERROR and value_type != expected:
                 diagnostics.append(Diagnostic(lineno, max(1, line.find("kembalikan") + 1), f"return type mismatch in '{active_function}': expected {expected}, got {value_type}"))
 
         if active_function and brace_depth <= 0:
