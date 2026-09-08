@@ -30,6 +30,17 @@ jobs:
       - name: Run native regression suite
         run: bash tests/run_regression.sh
 
+  native-integration-audit:
+    name: Native symbol integration audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify native symbol-table wiring
+        run: python3 tools/audit_native_integration.py
+
   semantic-static-check:
     name: Deterministic semantic static checks
     runs-on: ubuntu-latest

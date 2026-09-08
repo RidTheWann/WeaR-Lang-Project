@@ -11,11 +11,11 @@
 
 **Engineering branch:** `development`
 
-**Feature branch:** `feature/m1-type-system`
+**Feature branch:** `feature/m2-bootstrap-hardening`
 
-**Current phase:** M1 compiler stabilization / M2 bootstrap hardening
+**Current phase:** M2 bootstrap hardening
 
-**Current engineering focus:** Finish compiler/runtime/tooling implementation first. Testing and release-gate promotion happen after the planned engineering changes are substantially complete.
+**Current engineering focus:** Close the remaining native Stage-0 type/symbol integration and self-hosting synchronization gaps before promoting those paths to required release gates.
 
 ---
 
@@ -56,6 +56,8 @@
 - [x] Add a source-structure guard with deterministic line/column diagnostics.
 - [x] Route the CLI and semantic compatibility frontend through the canonical semantic engine.
 - [x] Add an M1 full compiler/tooling suite covering Python syntax, semantic fixtures, native symbol-table contract compilation, native regression tests, and bootstrap auditing.
+- [x] Add a native integration audit that verifies compiler.c, native symbol-table APIs, and the string symbol regression fixture remain wired together.
+- [x] Add the native integration audit as a required CI job for feature branches and pull requests.
 
 ### Compiler core
 - [x] Extend Stage-0 string-return detection for `input()` and `process_imports()`.
@@ -108,7 +110,6 @@
 - [ ] Extend diagnostics into native compiler semantic errors.
 
 ### Self-hosting
-- [x] Capture a real reproducible Stage-0 → Stage-1 → Stage-2 result.
 - [ ] Prove reproducibility across multiple consecutive CI runs.
 - [ ] Add automated comparison of generated compiler output between bootstrap stages.
 - [ ] Reduce reliance on generated/manual synchronization between `compiler.c` and `compiler.wr`.
@@ -166,9 +167,8 @@
 ## Change Log
 
 ### 2026-09-08
-- Added canonical `tools/semantic_engine.py` and made `semantic_contract.py` a compatibility facade.
-- Routed `typecheck_wr.py`, `semantic_frontend.py`, and `wear.py` through the canonical semantic engine.
-- Added syntax validation to the official CLI with dedicated exit code `7`.
-- Added the native symbol-table contract unit test and the M1 full compiler/tooling GitHub Actions suite.
-- Ran the broad M1 suite on commit `7de06b6e85f6054f4c42fec8d2eca90276248e2c`: CI, M1 full suite, and bootstrap workflow completed successfully; the bootstrap audit remains informational because Stage-0/Stage-1 still report the known three capability gaps.
-- Direct Stage-0 symbol/type migration remains the next compiler-core blocker; no claim is made that the legacy `is_string_varname()` heuristic has already been removed.
+- Merged PR #5 into `development`.
+- Started `feature/m2-bootstrap-hardening` from the merged `development` tip.
+- Added `tools/audit_native_integration.py` to make the native symbol-table seam mechanically visible and prevent accidental bypasses.
+- Added the native integration audit as a required CI job.
+- Current blocker remains the genuine Stage-0/Stage-1 semantic parity work: the bootstrap run exposed type drift inside the self-hosted compiler, so self-hosting is not yet considered release-ready.
