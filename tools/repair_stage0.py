@@ -43,14 +43,6 @@ def patch_stage1(source: str) -> str:
             f"fungsi {name}({param}: str) {{",
         )
 
-    message_marker = 'jika (sama(name, "message")) { kembalikan 1 }'
-    if message_marker not in source and 'jika (sama(name, "num")) { kembalikan 1 }' in source:
-        source = source.replace(
-            'jika (sama(name, "num")) { kembalikan 1 }',
-            message_marker + '\n    jika (sama(name, "num")) { kembalikan 1 }',
-            1,
-        )
-
     source = source.replace(
         'global_proto = global_proto + ");" + nl',
         'global_proto = global_proto + ");"\nglobal_proto = global_proto + nl',
@@ -67,15 +59,7 @@ def patch_stage1(source: str) -> str:
 
 
 def patch_stage0(source: str) -> str:
-    source = collapse_line_duplicates(source, 'char* global_protos = "";')
-    marker = 'if (__wear_streq(name, "message")) {\n        return 1;\n    }'
-    if marker not in source and 'if (__wear_streq(name, "num")) {' in source:
-        source = source.replace(
-            'if (__wear_streq(name, "num")) {\n        return 1;\n    }',
-            marker + '\n    if (__wear_streq(name, "num")) {\n        return 1;\n    }',
-            1,
-        )
-    return source
+    return collapse_line_duplicates(source, 'char* global_protos = "";')
 
 
 def main() -> int:
