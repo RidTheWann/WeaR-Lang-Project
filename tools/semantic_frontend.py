@@ -4,7 +4,8 @@
 The historical compiler decides several C types from identifier spelling.
 This frontend removes that dependency for typed user variables by
 renaming them to backend-safe internal identifiers before the legacy backend
-sees the program. The rewrite is scope-aware and preserves strings/comments.
+sees the program. The rewrite is scope-aware, keeps functions in their own
+namespace, and preserves strings/comments.
 """
 
 from __future__ import annotations
@@ -54,8 +55,14 @@ def _split_code_and_tail(line: str) -> tuple[str, str]:
     return line, ""
 
 
-def _rename_identifiers(line: str, mapping: dict[str, str]) -> str:
+def _rename_identifiers(
+    line: str,
+    mapping: dict[str, str],
+    function_names: set[str] | None = None,
+) -> str:
+    """Rename variable references without rewriting the function namespace."""
     code, comment = _split_code_and_tail(line)
+    functions = function_names or set()
     out: list[str] = []
     pos = 0
     in_string = False
@@ -71,11 +78,22 @@ def _rename_identifiers(line: str, mapping: dict[str, str]) -> str:
             match = IDENT.match(code, pos)
             if match:
                 word = match.group(0)
-                out.append(mapping.get(word, word))
-                pos = match.end()
+                end = match.end()
+                next_pos = end
+                while next_pos < len(code) and code[next_pos].isspace():
+                    next_pos += 1
+                # Function definitions/calls live in a distinct namespace from
+                # variables. Do not rewrite `foo(...)` merely because a local
+                # variable named `foo` exists.
+                is_function_reference = next_pos < len(code) and code[next_pos] == "(" and word in functions
+                if is_function_reference:
+                    out.append(word)
+                else:
+                    out.append(mapping.get(word, word))
+                pos = end
                 continue
         out.append(ch)
-        escaped = (ch == '\\' and not escaped)
+        escaped = ch == '\\' and not escaped
         if ch != '\\':
             escaped = False
         pos += 1
@@ -103,6 +121,14 @@ def rewrite_source(text: str) -> str:
     function_scope = "global"
     brace_depth = 0
     unique = 0
+    function_names: set[str] = set()
+
+    # Collect the function namespace first so a variable cannot accidentally
+    # rewrite a function call during the lowering pass.
+    for raw in lines:
+        fn = FUNCTION.match(raw)
+        if fn:
+            function_names.add(fn.group(1))
 
     for lineno, raw in enumerate(lines, 1):
         stripped = raw.strip()
@@ -171,8 +197,8 @@ def rewrite_source(text: str) -> str:
                 function_scope = "global"
                 brace_depth = 0
 
-    # Apply the mapping in a second pass so declaration order and shadowing are
-    # resolved before any source token is rewritten.
+    # Apply the mapping in a second pass so declaration order, shadowing, and
+    # the separate function namespace are resolved before source rewriting.
     output: list[str] = []
     function_scope = "global"
     brace_depth = 0
@@ -185,12 +211,12 @@ def rewrite_source(text: str) -> str:
             brace_depth = max(0, raw.count("{") - raw.count("}"))
             mapping = dict(global_mapping)
             mapping.update(mappings_by_scope.get(function_scope, {}))
-            output.append(_rename_identifiers(raw, mapping))
+            output.append(_rename_identifiers(raw, mapping, function_names))
             continue
 
         mapping = dict(global_mapping)
         mapping.update(mappings_by_scope.get(function_scope, {}))
-        output.append(_rename_identifiers(raw, mapping))
+        output.append(_rename_identifiers(raw, mapping, function_names))
 
         if function_scope != "global":
             brace_depth += raw.count("{") - raw.count("}")
