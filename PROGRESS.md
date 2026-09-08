@@ -39,6 +39,8 @@
 - [x] Strengthen the bootstrap audit so Stage-0 and Stage-1 requirements are checked bidirectionally.
 - [x] Add an isolated multi-stage bootstrap runner for Stage-0 → Stage-1 → Stage-2 reproducibility checks.
 - [x] Add a dedicated bootstrap workflow for feature branches and pull requests into `development`.
+- [x] Make feature branches run the standard CI suite on push.
+- [x] Add complete diagnostics when a bootstrap compiler stage fails to build.
 - [x] Document the development/stable branch model.
 
 ### Runtime
@@ -66,6 +68,8 @@
 
 ### Compiler core
 - [ ] Audit `compiler.c` and `compiler.wr` for semantic drift.
+- [ ] Fix Stage-0 return-type generation for string-returning user functions such as `process_imports`.
+- [ ] Fix chained string-concatenation code generation so expressions such as `a + ";" + nl` produce nested two-operand runtime calls.
 - [ ] Make Stage-0 and self-hosted Stage-1 behavior deterministic and reproducible.
 - [ ] Improve expression parsing and operator handling.
 - [ ] Replace heuristic string-type detection with explicit compiler type information.
@@ -164,6 +168,7 @@
 - [x] Stage-0/Stage-1 audit is bidirectional
 - [x] Deferred regression surface is documented
 - [x] Real multi-stage bootstrap execution is wired into CI
+- [x] Bootstrap failure diagnostics expose the first Stage-1 compilation blockers
 
 ### M2 — Self-Hosting Hardening
 - [ ] Reproducible bootstrap
@@ -211,3 +216,6 @@
 - Formalized the repository branching policy.
 - Added deferred regression fixtures for string concatenation, typed parameters, `tapi_jika`, `input()`, and imports.
 - Added a real multi-stage bootstrap runner and CI workflow that attempt Stage-0 → Stage-1 → Stage-2 generation and reproducibility verification.
+- Made feature-branch pushes run the standard CI suite.
+- Added complete Stage-1 compiler diagnostics to the bootstrap runner.
+- Confirmed the first concrete Stage-1 blockers: incorrect return type generation for `process_imports` and invalid three-operand `__wear_concat(...)` generation for chained concatenation.
