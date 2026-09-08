@@ -43,6 +43,7 @@
 - [x] Fix the isolated regression harness so Stage-0 receives its required `runtime.c` dependency.
 - [x] Restrict PR/test workflow permissions to read-only repository access; write access is limited to the feature-push self-repair job.
 - [x] Document the development/stable branch model.
+- [x] Add an explicit opt-in `WEAR_RUN_DEFERRED=1` mode for exercising semantic regression fixtures without weakening the baseline suite.
 
 ### Compiler core
 - [x] Extend Stage-0 string-return detection for `input()` and `process_imports()`.
@@ -92,6 +93,7 @@
 
 ### Testing
 - [ ] Verify the complete native regression suite in GitHub Actions.
+- [ ] Promote `string_symbol_tracking` into active CI after deterministic type handling is complete.
 - [ ] Promote string concatenation into active CI after deterministic type handling is complete.
 - [ ] Promote typed functions, `tapi_jika`, `input()`, and imports after Stage-0 synchronization.
 - [ ] Add tests for arrays and broader collection behavior.
@@ -237,3 +239,5 @@
 - Fixed the codemod duplicate-declaration regression and made the repair path fully idempotent.
 - Achieved the first real Stage-0 → Stage-1 → Stage-2 reproducibility pass.
 - Tightened GitHub Actions permissions so PR/test workflows use read-only repository access by default.
+- Added the deterministic symbol/type-tracking contract and deferred fixture using arbitrary variable names.
+- Added an opt-in deferred regression runner mode so semantic fixtures can be exercised without changing the baseline CI contract.
