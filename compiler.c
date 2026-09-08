@@ -605,6 +605,7 @@ int main(int argc, char* argv[]) {
     int done = 0;
     __wear_print_str("Loading: runtime.c");
     char* runtime_code = __wear_read_file("runtime.c");
+    char* global_protos = "";
     char* global_code = "";
     char* main_code = "";
     char* nl = __wear_newline_char();
@@ -1389,6 +1390,15 @@ int main(int argc, char* argv[]) {
                     }
                     global_code = __wear_concat(global_code, func_name);
                     global_code = __wear_concat(global_code, "(");
+                    char* global_proto = "";
+                    if (returns_string(func_name)) {
+                        global_proto = __wear_concat(global_proto, "char* ");
+                    }
+                    else {
+                        global_proto = __wear_concat(global_proto, "int ");
+                    }
+                    global_proto = __wear_concat(global_proto, func_name);
+                    global_proto = __wear_concat(global_proto, "(");
                     int skip_to_paren = 1;
                     while (skip_to_paren==1) {
                         if (i>=len) {
@@ -1457,14 +1467,79 @@ int main(int argc, char* argv[]) {
                                         }
                                     }
                                 }
+                                char* param_type = "char* ";
+                                int skip_type_ws = 1;
+                                while (skip_type_ws==1) {
+                                    if (i>=len) {
+                                        skip_type_ws = 0;
+                                    }
+                                    else {
+                                        char* type_ws = __wear_char_at(source, i);
+                                        if (is_space(type_ws)) {
+                                            i = i+1;
+                                        }
+                                        else {
+                                            skip_type_ws = 0;
+                                        }
+                                    }
+                                }
+                                char* colon = __wear_char_at(source, i);
+                                if (__wear_streq(colon, ":")) {
+                                    i = i+1;
+                                    int skip_type_ws2 = 1;
+                                    while (skip_type_ws2==1) {
+                                        if (i>=len) {
+                                            skip_type_ws2 = 0;
+                                        }
+                                        else {
+                                            char* type_ws2 = __wear_char_at(source, i);
+                                            if (is_space(type_ws2)) {
+                                                i = i+1;
+                                            }
+                                            else {
+                                                skip_type_ws2 = 0;
+                                            }
+                                        }
+                                    }
+                                    char* type_name = "";
+                                    int read_type = 1;
+                                    while (read_type==1) {
+                                        if (i>=len) {
+                                            read_type = 0;
+                                        }
+                                        else {
+                                            char* type_char = __wear_char_at(source, i);
+                                            if (is_letter(type_char)) {
+                                                type_name = __wear_concat(type_name, type_char);
+                                                i = i+1;
+                                            }
+                                            else {
+                                                read_type = 0;
+                                            }
+                                        }
+                                    }
+                                    if (__wear_streq(type_name, "int")) {
+                                        param_type = "int ";
+                                    }
+                                    else {
+                                        param_type = "char* ";
+                                    }
+                                }
+
                                 if (first_param==1) {
-                                    global_code = __wear_concat(global_code, "char* ");
+                                    global_code = __wear_concat(global_code, param_type);
                                     global_code = __wear_concat(global_code, param_name);
+                                    global_proto = __wear_concat(global_proto, param_type);
+                                    global_proto = __wear_concat(global_proto, param_name);
                                     first_param = 0;
                                 }
                                 else {
-                                    global_code = __wear_concat(global_code, ", char* ");
+                                    global_code = __wear_concat(global_code, ", ");
+                                    global_code = __wear_concat(global_code, param_type);
                                     global_code = __wear_concat(global_code, param_name);
+                                    global_proto = __wear_concat(global_proto, ", ");
+                                    global_proto = __wear_concat(global_proto, param_type);
+                                    global_proto = __wear_concat(global_proto, param_name);
                                 }
                             }
                             else {
@@ -1473,6 +1548,9 @@ int main(int argc, char* argv[]) {
                         }
                     }
                     global_code = __wear_concat(global_code, ")");
+                    global_proto = __wear_concat(global_proto, ");");
+                    global_proto = __wear_concat(global_proto, nl);
+                    global_protos = __wear_concat(global_protos, global_proto);
                     need_semi = 0;
                 }
                 else                 if (__wear_streq(word, "kembalikan")) {
@@ -1633,6 +1711,12 @@ int main(int argc, char* argv[]) {
     final_output = __wear_concat(final_output, nl);
     final_output = __wear_concat(final_output, runtime_code);
     final_output = __wear_concat(final_output, nl);
+    final_output = __wear_concat(final_output, nl);
+    final_output = __wear_concat(final_output, "/* Function Prototypes */");
+    final_output = __wear_concat(final_output, nl);
+    final_output = __wear_concat(final_output, global_protos);
+    final_output = __wear_concat(final_output, nl);
+    final_output = __wear_concat(final_output, "/* Function Definitions */");
     final_output = __wear_concat(final_output, nl);
     final_output = __wear_concat(final_output, global_code);
     final_output = __wear_concat(final_output, nl);
