@@ -7,10 +7,9 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 
 CC="${CC:-gcc}"
 CFLAGS="${CFLAGS:--std=c11 -Wall -Wextra -O2 -Wno-unused-parameter -Wno-unused-result}"
-RUN_DEFERRED="${WEAR_RUN_DEFERRED:-0}"
 
 printf '%s\n' '[1/3] Building Stage-0 compiler...'
-$CC $CFLAGS "$ROOT_DIR/compiler.c" -o "$WORK_DIR/wear-stage0"
+$CC $CFLAGS "$ROOT_DIR/compiler.c" "$ROOT_DIR/tools/native_symbol_table.c" -o "$WORK_DIR/wear-stage0"
 
 # Stage-0 reads runtime.c from its current working directory. Keep the
 # regression workspace self-contained so tests do not depend on process CWD.
@@ -41,10 +40,6 @@ run_case basic $'WeaR Lang regression: basic OK\n42'
 run_case control_flow $'3\n2\n1\nWeaR Lang regression: control OK'
 run_case functions '42'
 run_case print_types $'literal OK\nWeaR print string OK\n42'
-
-if [ "$RUN_DEFERRED" = '1' ]; then
-    printf '%s\n' '[deferred] Running semantic regression fixtures...'
-    run_case string_symbol_tracking $'WeaR symbol tracking OK\n42\ndeterministic\n7'
-fi
+run_case string_symbol_tracking $'WeaR symbol tracking OK\n42\ndeterministic\n7'
 
 printf '%s\n' '[3/3] Regression suite passed.'
