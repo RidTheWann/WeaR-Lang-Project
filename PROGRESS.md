@@ -11,7 +11,7 @@
 
 **Engineering branch:** `development`
 
-**Feature branch:** `feature/m1-regression-hardening`
+**Feature branch:** `feature/m1-type-system`
 
 **Current phase:** M1 compiler stabilization / M2 bootstrap hardening
 
@@ -46,6 +46,7 @@
 - [x] Add an explicit opt-in `WEAR_RUN_DEFERRED=1` mode for exercising semantic regression fixtures without weakening the baseline suite.
 - [x] Add deterministic semantic static checks independent of compiler naming heuristics.
 - [x] Add `tools/wear.py`, a portable command-line frontend with compile/run/version support and explicit input/output paths.
+- [x] Add a semantic compatibility frontend that lowers typed variables to deterministic backend-safe identifiers before Stage-0 transpilation.
 
 ### Compiler core
 - [x] Extend Stage-0 string-return detection for `input()` and `process_imports()`.
@@ -83,7 +84,7 @@
 
 ### Compiler core
 - [ ] Audit remaining compiler.c/compiler.wr semantic drift.
-- [ ] Replace heuristic string-type detection with explicit compiler symbol/type tracking.
+- [ ] Replace heuristic string-type detection inside the self-hosted compiler with explicit compiler symbol/type tracking.
 - [ ] Fix remaining `cetak` type dispatch edge cases.
 - [ ] Improve expression parsing and operator handling.
 - [ ] Improve diagnostics with source line/column information.
@@ -178,7 +179,7 @@
 
 ### M1 — Compiler Core Stabilization
 - [ ] Compiler/parser audit
-- [ ] Deterministic type handling
+- [ ] Deterministic type handling inside the self-hosted compiler
 - [ ] Diagnostics with line/column
 - [ ] Regression suite verified in CI
 - [x] Bootstrap capability drift is observable and tracked
@@ -192,6 +193,7 @@
 - [x] A real Stage-0 → Stage-1 → Stage-2 reproducibility check passed
 - [x] Deterministic semantic static-check surface added
 - [x] First production-oriented CLI surface added
+- [x] Semantic compatibility lowering integrated into the CLI backend path
 
 ### M2 — Self-Hosting Hardening
 - [x] First reproducible bootstrap generation pair
@@ -224,7 +226,10 @@
 ### 2026-09-08
 - Switched the engineering workflow to implementation-first mode per project direction; broad testing is deferred until the current implementation pass is complete.
 - Added `tools/wear.py` as the first production-oriented CLI surface with isolated build directories, explicit input/output paths, `run`, `compile`, `--help`, `--version`, and structured exit codes.
-- Updated `README.md` with the new CLI workflow.
+- Added `tools/semantic_contract.py` as the canonical frontend primitive type/signature layer.
+- Added `tools/semantic_frontend.py` to lower typed variables to deterministic backend-safe identifiers before the legacy Stage-0 compiler.
+- Integrated semantic lowering into `tools/wear.py`, so the supported CLI path no longer depends on user variable naming for string/int selection.
+- Kept the self-hosted compiler migration explicitly in progress; this frontend is the compatibility bridge until `compiler.c` / `compiler.wr` receive native symbol-table tracking.
 
 ### 2026-09-06
 - Added `PROGRESS.md` as the persistent development roadmap and engineering memory for WeaR Lang.
