@@ -43,6 +43,13 @@ int main(void) {
     assert(wear_symbol_lookup_type(symbols, symbol_count, "caption", "worker") == WEAR_TYPE_INT);
     assert(wear_symbol_lookup_type(symbols, symbol_count, "caption", "other") == WEAR_TYPE_STR);
 
+    /* Same-scope redeclaration must not create a second conflicting symbol. */
+    assert(!wear_symbol_declare(symbols, &symbol_count, 8,
+                                "caption", WEAR_TYPE_STR, "worker", 13,
+                                "str_worker_caption_13"));
+    assert(symbol_count == 2);
+    assert(wear_symbol_lookup_type(symbols, symbol_count, "caption", "worker") == WEAR_TYPE_INT);
+
     assert(wear_symbol_update_type(symbols, symbol_count, "caption", "worker", WEAR_TYPE_STR));
     assert(wear_symbol_lookup_type(symbols, symbol_count, "caption", "worker") == WEAR_TYPE_STR);
     assert(!wear_symbol_update_type(symbols, symbol_count, "missing", "worker", WEAR_TYPE_STR));
@@ -56,6 +63,12 @@ int main(void) {
     assert(function_count == 2);
     assert(wear_function_lookup_return_type(declared_functions, function_count, "render") == WEAR_TYPE_STR);
     assert(wear_function_lookup_return_type(declared_functions, function_count, "compute") == WEAR_TYPE_INT);
+
+    /* Function redeclaration must also preserve the first signature. */
+    assert(!wear_function_declare(declared_functions, &function_count, 4,
+                                  "render", WEAR_TYPE_INT, NULL, 0, 22));
+    assert(function_count == 2);
+    assert(wear_function_lookup_return_type(declared_functions, function_count, "render") == WEAR_TYPE_STR);
 
     /* Capacity boundaries must fail without corrupting the table. */
     WearSymbol one_symbol[1] = {0};
