@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 import re
 
-from semantic_contract import INT, STR, UNKNOWN, expression_type
+from semantic_contract import FunctionSignature, INT, STR, UNKNOWN, expression_type
 from symbol_table import SymbolTable
 
 IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
@@ -73,9 +73,6 @@ def _rename_identifiers(
                 next_pos = end
                 while next_pos < len(code) and code[next_pos].isspace():
                     next_pos += 1
-                # Function definitions/calls live in a distinct namespace from
-                # variables. Do not rewrite `foo(...)` merely because a local
-                # variable named `foo` exists.
                 is_function_reference = next_pos < len(code) and code[next_pos] == "(" and word in functions
                 if is_function_reference:
                     out.append(word)
@@ -121,7 +118,7 @@ def rewrite_source(text: str) -> str:
         if fn:
             name = fn.group(1)
             function_names.add(name)
-            table.declare_function(name, __import__("semantic_contract").FunctionSignature(UNKNOWN), line=0)
+            table.declare_function(name, FunctionSignature(UNKNOWN), line=0)
 
     for lineno, raw in enumerate(lines, 1):
         stripped = raw.strip()
@@ -184,8 +181,6 @@ def rewrite_source(text: str) -> str:
                 function_scope = "global"
                 brace_depth = 0
 
-    # Apply the mapping in a second pass so declaration order, shadowing, and
-    # the separate function namespace are resolved before source rewriting.
     output: list[str] = []
     function_scope = "global"
     brace_depth = 0
