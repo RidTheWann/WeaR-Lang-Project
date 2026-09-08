@@ -53,6 +53,9 @@
 - [x] Route semantic compatibility lowering through the shared symbol-table implementation.
 - [x] Add a native C type contract with explicit `unknown`, `int`, `str`, and `error` identities.
 - [x] Add a native C symbol/function lookup contract that mirrors the frontend scope and namespace model.
+- [x] Add a source-structure guard with deterministic line/column diagnostics.
+- [x] Route the CLI and semantic compatibility frontend through the canonical semantic engine.
+- [x] Add an M1 full compiler/tooling suite covering Python syntax, semantic fixtures, native symbol-table contract compilation, native regression tests, and bootstrap auditing.
 
 ### Compiler core
 - [x] Extend Stage-0 string-return detection for `input()` and `process_imports()`.
@@ -98,11 +101,11 @@
 ### Compiler core
 - [ ] Audit remaining compiler.c/compiler.wr semantic drift.
 - [ ] Replace heuristic string-type detection inside the self-hosted compiler with explicit compiler symbol/type tracking.
-- [ ] Connect the native C symbol-table contract to Stage-0 declaration/assignment/`cetak` dispatch.
-- [ ] Fix remaining `cetak` type dispatch edge cases.
+- [ ] Connect the native C symbol-table contract directly to Stage-0 declaration/assignment/`cetak` dispatch.
+- [ ] Fix remaining native `cetak` type dispatch edge cases.
 - [ ] Improve expression parsing and operator handling.
-- [ ] Improve diagnostics with source line/column information.
-- [ ] Validate malformed syntax without crashing or generating invalid C.
+- [x] Introduce pre-semantic malformed-source diagnostics.
+- [ ] Extend diagnostics into native compiler semantic errors.
 
 ### Self-hosting
 - [x] Capture a real reproducible Stage-0 → Stage-1 → Stage-2 result.
@@ -113,10 +116,10 @@
 
 ### Testing
 - [x] Add static semantic checking for declared variable types and `cetak` expressions.
-- [ ] Hold broader testing/CI promotion until the implementation pass is complete.
-- [ ] Verify the complete native regression suite in GitHub Actions.
-- [ ] Promote `string_symbol_tracking` into active CI after deterministic type handling is complete.
-- [ ] Promote string concatenation into active CI after deterministic type handling is complete.
+- [x] Execute the M1 full compiler/tooling suite in GitHub Actions successfully on the feature branch.
+- [x] Execute the native baseline regression suite successfully in GitHub Actions.
+- [ ] Promote `string_symbol_tracking` into active native regression after direct Stage-0 symbol tracking is complete.
+- [ ] Promote string concatenation into active native regression after deterministic native type handling is complete.
 - [ ] Promote typed functions, `tapi_jika`, `input()`, and imports after Stage-0 synchronization.
 - [ ] Add tests for arrays and broader collection behavior.
 - [ ] Add negative tests for syntax/type errors.
@@ -163,7 +166,9 @@
 ## Change Log
 
 ### 2026-09-08
-- Added native C semantic type identities in `tools/native_types.h`.
-- Added native C symbol/function lookup APIs in `tools/native_symbol_table.h` and `tools/native_symbol_table.c`.
-- Defined the native migration contract without changing `main` or claiming the legacy heuristic has already been removed.
-- Kept implementation-first development policy active; broad validation remains deferred until the native migration pass is substantially complete.
+- Added canonical `tools/semantic_engine.py` and made `semantic_contract.py` a compatibility facade.
+- Routed `typecheck_wr.py`, `semantic_frontend.py`, and `wear.py` through the canonical semantic engine.
+- Added syntax validation to the official CLI with dedicated exit code `7`.
+- Added the native symbol-table contract unit test and the M1 full compiler/tooling GitHub Actions suite.
+- Ran the broad M1 suite on commit `7de06b6e85f6054f4c42fec8d2eca90276248e2c`: CI, M1 full suite, and bootstrap workflow completed successfully; the bootstrap audit remains informational because Stage-0/Stage-1 still report the known three capability gaps.
+- Direct Stage-0 symbol/type migration remains the next compiler-core blocker; no claim is made that the legacy `is_string_varname()` heuristic has already been removed.
