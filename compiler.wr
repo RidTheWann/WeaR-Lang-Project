@@ -229,6 +229,7 @@ fungsi is_string_varname(name: str) {
     jika (sama(name, "c")) { kembalikan 1 }
     jika (sama(name, "q")) { kembalikan 1 }
     jika (sama(name, "next")) { kembalikan 1 }
+    jika (sama(name, "message")) { kembalikan 1 }
     jika (sama(name, "num")) { kembalikan 1 } 
     kembalikan 0
 }
