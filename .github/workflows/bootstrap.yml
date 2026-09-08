@@ -1,0 +1,29 @@
+name: WeaR Lang Bootstrap Check
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+  pull_request:
+    branches:
+      - development
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap-experiment:
+    name: Stage-0 -> Stage-1 -> Stage-2 reproducibility
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install GCC
+        run: sudo apt-get update && sudo apt-get install -y gcc
+
+      - name: Run multi-stage bootstrap
+        run: bash tools/bootstrap_smoke.sh
