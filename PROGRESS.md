@@ -49,6 +49,8 @@
 - [x] Add a semantic compatibility frontend that lowers typed variables to deterministic backend-safe identifiers before Stage-0 transpilation.
 - [x] Add localized frontend normalization for Indonesian/English source while keeping a single canonical backend dialect.
 - [x] Add the deterministic scoped symbol-table seam used as the migration boundary for native type tracking.
+- [x] Extend the symbol-table seam with an explicit function namespace alongside variable scopes.
+- [x] Route semantic compatibility lowering through the shared symbol-table implementation.
 
 ### Compiler core
 - [x] Extend Stage-0 string-return detection for `input()` and `process_imports()`.
@@ -206,6 +208,8 @@
 - [x] Multilingual frontend normalization integrated into the CLI path
 - [x] Compatibility lowering preserves the separate function namespace
 - [x] Scoped symbol-table migration seam added
+- [x] Function namespace modeled explicitly in the migration seam
+- [x] Compatibility lowering consumes the shared symbol-table implementation
 
 ### M2 — Self-Hosting Hardening
 - [x] First reproducible bootstrap generation pair
@@ -246,9 +250,9 @@
 - Fixed function return inference so no-return functions remain `unknown` and incompatible mixed returns become `error` instead of silently defaulting to `int`.
 - Added semantic regression fixtures for global visibility and mixed return types.
 - Hardened semantic lowering so variable renames never hijack a same-named function definition or call.
-- Added `tools/symbol_table.py` as the deterministic scoped symbol-table migration seam. The contract resolves local function scope before global scope and explicitly stores primitive type metadata independently from identifier spelling.
-- Added a namespace-shadowing regression fixture to exercise variable/function name collisions.
-- Kept the native self-hosted compiler migration explicitly in progress; the new symbol-table seam is an architectural boundary, not yet a replacement for the legacy `is_string_varname()` implementation.
+- Added the scoped symbol-table seam and explicit function namespace to prepare native compiler migration.
+- Routed semantic compatibility lowering through the shared symbol-table implementation rather than maintaining a parallel symbol representation.
+- Kept the native self-hosted compiler migration explicitly in progress; the Python semantic layer remains a compatibility bridge until `compiler.c` / `compiler.wr` receive native symbol-table tracking.
 
 ### 2026-09-06
 - Added `PROGRESS.md` as the persistent development roadmap and engineering memory for WeaR Lang.
