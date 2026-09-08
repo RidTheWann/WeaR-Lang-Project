@@ -2,10 +2,10 @@
 """WeaR Lang command-line frontend.
 
 The frontend isolates compiler artifacts in a temporary workspace and provides
-one stable entry point for localized source normalization, semantic validation,
-compatibility lowering, transpilation, and native builds. The legacy Stage-0
-compiler remains the backend while the frontend removes its historical
-identifier-name typing dependency.
+one stable entry point for localized source normalization, syntax guarding,
+semantic validation, compatibility lowering, transpilation, and native builds.
+The legacy Stage-0 compiler remains the backend while the frontend removes
+its historical identifier-name typing dependency.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from pathlib import Path
 from localization import normalize_file
 from semantic_contract import check_source
 from semantic_frontend import rewrite_file
+from syntax_guard import check_source as check_syntax
 
 VERSION = "1.1-dev"
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +34,7 @@ EXIT_TOOLCHAIN = 3
 EXIT_COMPILE = 4
 EXIT_RUNTIME = 5
 EXIT_SEMANTIC = 6
+EXIT_SYNTAX = 7
 
 
 def fail(message: str, code: int) -> int:
@@ -57,9 +59,13 @@ def run_process(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess
 
 
 def validate_source(source: Path) -> None:
-    errors = check_source(source)
-    if errors:
-        raise ValueError("\n".join(errors))
+    syntax_errors = check_syntax(source)
+    if syntax_errors:
+        raise SyntaxError("\n".join(syntax_errors))
+
+    semantic_errors = check_source(source)
+    if semantic_errors:
+        raise ValueError("\n".join(semantic_errors))
 
 
 def prepare_source(source: Path, workdir: Path, language: str) -> Path:
@@ -86,8 +92,6 @@ def build_stage0(compiler_source: Path, runtime_source: Path, cc: str, workdir: 
 
 
 def transpile(compiler_exe: Path, source: Path, workdir: Path) -> Path:
-    # The backend still expects input.wr. Feed it the semantically lowered
-    # source so arbitrary user variable names no longer control C type choice.
     lowered = workdir / "input.wr"
     rewrite_file(source, lowered)
 
@@ -156,6 +160,8 @@ def command_compile(args: argparse.Namespace) -> int:
         )
     except FileNotFoundError as exc:
         return fail(str(exc), EXIT_USAGE)
+    except SyntaxError as exc:
+        return fail(f"syntax validation failed\n{exc}", EXIT_SYNTAX)
     except ValueError as exc:
         return fail(f"semantic validation failed\n{exc}", EXIT_SEMANTIC)
     except RuntimeError as exc:
@@ -177,6 +183,8 @@ def command_run(args: argparse.Namespace) -> int:
                 validate_source(normalized)
     except FileNotFoundError as exc:
         return fail(str(exc), EXIT_USAGE)
+    except SyntaxError as exc:
+        return fail(f"syntax validation failed\n{exc}", EXIT_SYNTAX)
     except ValueError as exc:
         return fail(f"semantic validation failed\n{exc}", EXIT_SEMANTIC)
 
@@ -200,6 +208,8 @@ def command_run(args: argparse.Namespace) -> int:
                 keep_c=False,
                 skip_semantic=args.no_semantic_check,
             )
+        except SyntaxError as exc:
+            return fail(f"syntax validation failed\n{exc}", EXIT_SYNTAX)
         except ValueError as exc:
             return fail(f"semantic validation failed\n{exc}", EXIT_SEMANTIC)
         except RuntimeError as exc:
@@ -221,7 +231,7 @@ def add_common_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--no-semantic-check",
         action="store_true",
-        help="skip semantic validation while retaining localized-source normalization and compatibility lowering",
+        help="skip syntax and semantic validation while retaining localized-source normalization and compatibility lowering",
     )
     parser.add_argument(
         "--lang",
@@ -234,7 +244,7 @@ def add_common_options(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="wear",
-        description="Compile and run WeaR Lang programs with localized syntax and the native Stage-0 backend.",
+        description="Compile and run WeaR Lang programs with localized syntax, source guards, and the native Stage-0 backend.",
     )
     parser.add_argument("--version", action="version", version=f"WeaR Lang {VERSION}")
     parser.add_argument("--cc", default=os.environ.get("WEAR_CC", "gcc"), help="C compiler executable (default: gcc)")
