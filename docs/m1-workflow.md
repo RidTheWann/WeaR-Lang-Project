@@ -31,3 +31,7 @@ Before a feature branch is merged into `development`:
 `compiler.wr` is the canonical self-hosted compiler source. `compiler.c` is the Stage-0 bootstrap compiler. Self-hosting is not considered release-safe until Stage-0 can compile the canonical Stage-1 source and consecutive bootstrap generations are reproducible.
 
 Until that point, the bootstrap audit is intentionally visible but non-gating.
+
+## Current feature batch
+
+`feature/m1-regression-hardening` is branched from `development` and contains the M1 regression/audit hardening work. Its target is `development`, not `main`.
