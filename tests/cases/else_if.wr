@@ -1,0 +1,9 @@
+// Else-if syntax regression surface.
+var nilai = 85
+jika (nilai >= 90) {
+    cetak "A"
+} tapi_jika (nilai >= 80) {
+    cetak "B"
+} lainnya {
+    cetak "C"
+}
