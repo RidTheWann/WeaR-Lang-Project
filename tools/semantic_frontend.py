@@ -4,8 +4,8 @@
 The historical compiler decides several C types from identifier spelling.
 This frontend removes that dependency for typed user variables by
 renaming them to backend-safe internal identifiers before the legacy backend
-sees the program. The rewrite is scope-aware, keeps functions in their own
-namespace, and preserves strings/comments.
+sees the program. The rewrite is scope-aware, keeps variables and functions
+in separate namespaces, and preserves strings/comments.
 """
 
 from __future__ import annotations
@@ -73,16 +73,17 @@ def _rename_identifiers(
                 next_pos = end
                 while next_pos < len(code) and code[next_pos].isspace():
                     next_pos += 1
-                is_function_reference = next_pos < len(code) and code[next_pos] == "(" and word in functions
-                if is_function_reference:
-                    out.append(word)
-                else:
-                    out.append(mapping.get(word, word))
+                is_function_reference = (
+                    next_pos < len(code)
+                    and code[next_pos] == "("
+                    and word in functions
+                )
+                out.append(word if is_function_reference else mapping.get(word, word))
                 pos = end
                 continue
         out.append(ch)
-        escaped = ch == '\\' and not escaped
-        if ch != '\\':
+        escaped = ch == "\\" and not escaped
+        if ch != "\\":
             escaped = False
         pos += 1
     return ''.join(out) + comment
@@ -95,8 +96,6 @@ def _infer_type(expr: str, symbols: dict) -> str:
 def _internal_name(tag: str, scope: str, name: str, unique: int) -> str:
     safe_scope = re.sub(r"[^A-Za-z0-9_]", "_", scope)
     safe_name = re.sub(r"[^A-Za-z0-9_]", "_", name)
-    # The legacy compiler recognizes str*/string-ish spellings, while int*
-    # names intentionally sit outside those string-prefix patterns.
     if tag == STR:
         return f"str_{safe_scope}_{safe_name}_{unique}"
     return f"int_{safe_scope}_{safe_name}_{unique}"
@@ -111,8 +110,7 @@ def rewrite_source(text: str) -> str:
     function_names: set[str] = set()
     mappings_by_scope: dict[str, dict[str, str]] = {"global": {}}
 
-    # Collect the function namespace first so a variable cannot accidentally
-    # rewrite a function call during the lowering pass.
+    # Collect the function namespace before rewriting any variable reference.
     for raw in lines:
         fn = FUNCTION.match(raw)
         if fn:
