@@ -13,9 +13,9 @@
 
 **Feature branch:** `feature/m1-regression-hardening`
 
-**Current phase:** Core compiler stabilization and self-hosting hardening
+**Current phase:** M1 compiler stabilization / M2 bootstrap hardening
 
-**Current engineering focus:** Verify the Stage-0 root-cause repairs, then close the remaining bootstrap blockers with reproducible Stage-1/Stage-2 generation.
+**Current engineering focus:** Keep Stage-0 → Stage-1 → Stage-2 reproducibility green, eliminate heuristic type decisions, and make the native regression suite pass in PR CI.
 
 ---
 
@@ -41,6 +41,7 @@
 - [x] Add a dedicated bootstrap workflow for feature branches and pull requests into `development`.
 - [x] Add complete diagnostics when a bootstrap compiler stage fails to build.
 - [x] Fix the isolated regression harness so Stage-0 receives its required `runtime.c` dependency.
+- [x] Restrict PR/test workflow permissions to read-only repository access; write access is limited to the feature-push self-repair job.
 - [x] Document the development/stable branch model.
 
 ### Compiler core
@@ -48,6 +49,8 @@
 - [x] Make Stage-0 user-function return type generation consult `returns_string()` instead of hard-coding `int`.
 - [x] Upgrade the legacy embedded Stage-0 string concatenation helper to accept both two- and three-operand generated calls.
 - [x] Align the standalone runtime concatenation dispatcher with the legacy three-operand compatibility path.
+- [x] Add typed parameter support for the current self-hosted compiler surface (`: int` / `: str`).
+- [x] Add deterministic function prototype generation to Stage-0 output.
 
 ### Runtime
 - [x] Harden string allocation and concatenation against null inputs and size overflow.
@@ -74,27 +77,25 @@
 
 ### Compiler core
 - [ ] Audit remaining compiler.c/compiler.wr semantic drift.
-- [ ] Verify the Stage-0 return-type and concatenation repairs through real bootstrap execution.
-- [ ] Make Stage-0 and self-hosted Stage-1 behavior deterministic and reproducible.
+- [ ] Replace heuristic string-type detection with explicit compiler symbol/type tracking.
+- [ ] Fix remaining `cetak` type dispatch edge cases.
 - [ ] Improve expression parsing and operator handling.
-- [ ] Replace heuristic string-type detection with explicit compiler type information.
 - [ ] Improve diagnostics with source line/column information.
 - [ ] Validate malformed syntax without crashing or generating invalid C.
 
 ### Self-hosting
-- [ ] Prove bootstrap reproducibility across consecutive generations.
-- [ ] Capture the first reproducible Stage-0 → Stage-1 → Stage-2 result.
+- [x] Capture a real reproducible Stage-0 → Stage-1 → Stage-2 result.
+- [ ] Prove reproducibility across multiple consecutive CI runs.
 - [ ] Add automated comparison of generated compiler output between bootstrap stages.
 - [ ] Reduce reliance on generated/manual synchronization between `compiler.c` and `compiler.wr`.
-- [ ] Re-enable self-hosting as a required CI gate after Stage-0/Stage-1 synchronization is complete.
+- [ ] Re-enable self-hosting as a required CI gate after the native regression surface is stable.
 
 ### Testing
 - [ ] Verify the complete native regression suite in GitHub Actions.
-- [ ] Promote string concatenation into active CI after deterministic type handling is available.
+- [ ] Promote string concatenation into active CI after deterministic type handling is complete.
 - [ ] Promote typed functions, `tapi_jika`, `input()`, and imports after Stage-0 synchronization.
 - [ ] Add tests for arrays and broader collection behavior.
 - [ ] Add negative tests for syntax/type errors.
-- [ ] Add bootstrap/self-hosting tests.
 - [ ] Add generated-C compilation tests with a strict warning policy.
 
 ### CLI & developer experience
@@ -146,6 +147,7 @@
 5. **Do not commit secrets, local machine state, generated build artifacts, or temporary files.**
 6. **Every major compiler change should include a regression test.**
 7. **Self-hosting must remain reproducible.**
+8. **PR/test workflows should default to read-only permissions.**
 
 ## Branch Policy
 
@@ -176,11 +178,14 @@
 - [x] Bootstrap failure diagnostics expose the first Stage-1 compilation blockers
 - [x] Regression workspace dependency handling fixed
 - [x] Stage-0 return-type and concatenation root-cause repairs applied
+- [x] Stage-0 prototype generation stabilized
+- [x] A real Stage-0 → Stage-1 → Stage-2 reproducibility check passed
 
 ### M2 — Self-Hosting Hardening
-- [ ] Reproducible bootstrap
+- [x] First reproducible bootstrap generation pair
 - [ ] Multi-generation verification
 - [ ] Stage synchronization policy
+- [ ] Self-hosting release gate
 
 ### M3 — Developer Tooling
 - [ ] Proper CLI
@@ -228,3 +233,7 @@
 - Confirmed the first concrete Stage-1 blockers: incorrect return type generation for `process_imports` and invalid three-operand `__wear_concat(...)` generation for chained concatenation.
 - Fixed the regression harness so isolated test workspaces include the runtime dependency required by Stage-0.
 - Applied Stage-0 root-cause repairs for string-returning functions and legacy three-operand concatenation compatibility.
+- Added typed parameter synchronization and deterministic prototype generation.
+- Fixed the codemod duplicate-declaration regression and made the repair path fully idempotent.
+- Achieved the first real Stage-0 → Stage-1 → Stage-2 reproducibility pass.
+- Tightened GitHub Actions permissions so PR/test workflows use read-only repository access by default.
