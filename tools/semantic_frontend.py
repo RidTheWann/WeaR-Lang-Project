@@ -3,9 +3,9 @@
 
 The historical compiler decides several C types from identifier spelling.
 This frontend removes that dependency for user variables by deterministically
-renaming declared variables to type-tagged internal identifiers before the
-legacy backend sees the program. The transformation is source preserving for
-strings/comments and does not rename keywords or function names.
+renaming typed variables to backend-safe internal identifiers before the legacy
+backend sees the program. Strings/comments are preserved and keywords/function
+names are never renamed.
 """
 
 from __future__ import annotations
@@ -87,6 +87,12 @@ def _infer_type(expr: str, symbols: dict[str, Symbol]) -> str:
     return expression_type(expr, symbols)
 
 
+def _internal_name(tag: str, scope: str, name: str, unique: int) -> str:
+    # The legacy compiler recognizes str*/string-ish spellings, while int*
+    # names are intentionally outside those patterns.
+    return f"str_{scope}_{name}_{unique}" if tag == STR else f"int_{scope}_{name}_{unique}"
+
+
 def rewrite_source(text: str) -> str:
     symbols: dict[str, Symbol] = {}
     mapping: dict[str, str] = {}
@@ -114,8 +120,10 @@ def rewrite_source(text: str) -> str:
                         continue
                     declared = parts[1] if len(parts) == 2 else ""
                     typ = STR if declared == "str" else INT if declared == "int" else UNKNOWN
+                    if typ == UNKNOWN:
+                        continue
                     unique += 1
-                    internal = f"__wear_{'str' if typ == STR else 'int' if typ == INT else 'v'}_{function_scope}_{name}_{unique}"
+                    internal = _internal_name(typ, function_scope, name, unique)
                     symbols[name] = Symbol(name, typ, internal, function_scope, lineno)
                     mapping[name] = internal
             continue
@@ -124,11 +132,11 @@ def rewrite_source(text: str) -> str:
         if decl:
             name, expr = decl.groups()
             typ = _infer_type(expr, symbols)
-            unique += 1
-            tag = "str" if typ == STR else "int" if typ == INT else "v"
-            internal = f"__wear_{tag}_{function_scope}_{name}_{unique}"
-            symbols[name] = Symbol(name, typ, internal, function_scope, lineno)
-            mapping[name] = internal
+            if typ in (STR, INT):
+                unique += 1
+                internal = _internal_name(typ, function_scope, name, unique)
+                symbols[name] = Symbol(name, typ, internal, function_scope, lineno)
+                mapping[name] = internal
             continue
 
         assignment = ASSIGN.match(raw)
