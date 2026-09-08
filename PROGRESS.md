@@ -37,6 +37,8 @@
 - [x] Add a structural Stage-0/Stage-1 capability audit under `tools/audit_bootstrap.py`.
 - [x] Make bootstrap capability drift visible in CI without turning the known M1 mismatch into a false-green release gate.
 - [x] Strengthen the bootstrap audit so Stage-0 and Stage-1 requirements are checked bidirectionally.
+- [x] Add an isolated multi-stage bootstrap runner for Stage-0 → Stage-1 → Stage-2 reproducibility checks.
+- [x] Add a dedicated bootstrap workflow for feature branches and pull requests into `development`.
 - [x] Document the development/stable branch model.
 
 ### Runtime
@@ -72,6 +74,7 @@
 
 ### Self-hosting
 - [ ] Prove bootstrap reproducibility across consecutive generations.
+- [ ] Use the real bootstrap workflow to capture the first reproducible Stage-0 → Stage-1 → Stage-2 result.
 - [ ] Add automated comparison of generated compiler output between bootstrap stages.
 - [ ] Reduce reliance on generated/manual synchronization between `compiler.c` and `compiler.wr`.
 - [ ] Re-enable self-hosting as a required CI gate after Stage-0/Stage-1 synchronization is complete.
@@ -160,6 +163,7 @@
 - [x] Bootstrap capability drift is now observable and tracked
 - [x] Stage-0/Stage-1 audit is bidirectional
 - [x] Deferred regression surface is documented
+- [x] Real multi-stage bootstrap execution is wired into CI
 
 ### M2 — Self-Hosting Hardening
 - [ ] Reproducible bootstrap
@@ -206,3 +210,4 @@
 - Added M1 workflow and compiler architecture documentation.
 - Formalized the repository branching policy.
 - Added deferred regression fixtures for string concatenation, typed parameters, `tapi_jika`, `input()`, and imports.
+- Added a real multi-stage bootstrap runner and CI workflow that attempt Stage-0 → Stage-1 → Stage-2 generation and reproducibility verification.
