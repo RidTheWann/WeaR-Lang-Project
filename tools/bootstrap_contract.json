@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "canonical_source": "compiler.wr",
+  "stage0_source": "compiler.c",
+  "checks": [
+    {
+      "name": "import preprocessing",
+      "stage0": ["process_imports"],
+      "stage1": ["process_imports", "impor"]
+    },
+    {
+      "name": "runtime input builtin",
+      "stage0": ["__wear_input"],
+      "stage1": ["input"]
+    },
+    {
+      "name": "else-if keyword",
+      "stage0": ["tapi_jika", "else if"],
+      "stage1": ["tapi_jika"]
+    },
+    {
+      "name": "function prototypes",
+      "stage0": ["Function Prototypes", "global_proto"],
+      "stage1": ["global_protos"]
+    },
+    {
+      "name": "typed parameter syntax",
+      "stage0": [": int"],
+      "stage1": [": int", ": str"]
+    },
+    {
+      "name": "underscore-aware identifiers",
+      "stage0": ["\"_\""],
+      "stage1": ["\"_\""]
+    },
+    {
+      "name": "runtime file reader",
+      "stage0": ["__wear_read_file"],
+      "stage1": ["baca_file"]
+    },
+    {
+      "name": "runtime file writer",
+      "stage0": ["__wear_write_file"],
+      "stage1": ["tulis_file"]
+    },
+    {
+      "name": "string comparison",
+      "stage0": ["__wear_streq"],
+      "stage1": ["sama"]
+    },
+    {
+      "name": "newline runtime helper",
+      "stage0": ["__wear_newline_char"],
+      "stage1": ["newline_char"]
+    }
+  ]
+}
