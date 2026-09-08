@@ -58,6 +58,7 @@
 - [x] Add deterministic function prototype generation to Stage-0 output.
 - [x] Make the canonical semantic layer preserve global-symbol visibility inside functions.
 - [x] Make function return inference preserve `unknown` for no-return functions and `error` for incompatible mixed return types instead of silently defaulting to `int`.
+- [x] Harden compatibility lowering so variable identifiers cannot accidentally rewrite function definitions or calls in the separate function namespace.
 
 ### Runtime
 - [x] Harden string allocation and concatenation against null inputs and size overflow.
@@ -201,6 +202,7 @@
 - [x] First production-oriented CLI surface added
 - [x] Semantic compatibility lowering integrated into the CLI backend path
 - [x] Multilingual frontend normalization integrated into the CLI path
+- [x] Compatibility lowering preserves the separate function namespace
 
 ### M2 — Self-Hosting Hardening
 - [x] First reproducible bootstrap generation pair
@@ -240,6 +242,7 @@
 - Fixed semantic scope handling so functions resolve global symbols before local shadowing.
 - Fixed function return inference so no-return functions remain `unknown` and incompatible mixed returns become `error` instead of silently defaulting to `int`.
 - Added semantic regression fixtures for global visibility and mixed return types.
+- Hardened semantic lowering so variable renames never hijack a same-named function definition or call.
 - Kept the native self-hosted compiler migration explicitly in progress; the Python semantic layer remains a compatibility bridge until `compiler.c` / `compiler.wr` receive native symbol-table tracking.
 
 ### 2026-09-06
