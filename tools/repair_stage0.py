@@ -35,9 +35,12 @@ def repair_stage1_source(source: str) -> str:
         "process_imports": "src",
     }
     for name, param in declarations.items():
-        old = f"fungsi {name}({param}) {{"
-        new = f"fungsi {name}({param}: str) {{"
-        source = replace_once(source, old, new, f"typed parameter annotation for {name}")
+        source = replace_once(
+            source,
+            f"fungsi {name}({param}) {{",
+            f"fungsi {name}({param}: str) {{",
+            f"typed parameter annotation for {name}",
+        )
 
     source = replace_once(
         source,
@@ -76,12 +79,17 @@ def repair_compiler(source: str) -> str:
     new_returns = '''int returns_string(char* fn) {\n    if (__wear_streq(fn, "baca_file")) {\n        return 1;\n    }\n    if (__wear_streq(fn, "char_at")) {\n        return 1;\n    }\n    if (__wear_streq(fn, "quote_char")) {\n        return 1;\n    }\n    if (__wear_streq(fn, "newline_char")) {\n        return 1;\n    }\n    if (__wear_streq(fn, "input")) {\n        return 1;\n    }\n    if (__wear_streq(fn, "process_imports")) {\n        return 1;\n    }\n    return 0;\n}\n'''
     source = replace_once(source, old_returns, new_returns, "returns_string")
 
-    source = replace_once(
-        source,
-        'char* global_code = "";\n    char* main_code = "";',
-        'char* global_protos = "";\n    char* global_code = "";\n    char* main_code = "";',
-        "prototype output buffer",
-    )
+    duplicate_proto = 'char* global_protos = "";\n    char* global_protos = "";'
+    while duplicate_proto in source:
+        source = source.replace(duplicate_proto, 'char* global_protos = "";', 1)
+
+    if 'char* global_protos = "";' not in source:
+        source = replace_once(
+            source,
+            'char* global_code = "";\n    char* main_code = "";',
+            'char* global_protos = "";\n    char* global_code = "";\n    char* main_code = "";',
+            "prototype output buffer",
+        )
 
     old_function_prefix = '''                    if (returns_string(func_name)) {\n                        global_code = __wear_concat(global_code, "char* ");\n                    }\n                    else {\n                        global_code = __wear_concat(global_code, "int ");\n                    }\n                    global_code = __wear_concat(global_code, func_name);\n                    global_code = __wear_concat(global_code, "(");\n                    int skip_to_paren = 1;\n'''
     new_function_prefix = '''                    if (returns_string(func_name)) {\n                        global_code = __wear_concat(global_code, "char* ");\n                    }\n                    else {\n                        global_code = __wear_concat(global_code, "int ");\n                    }\n                    global_code = __wear_concat(global_code, func_name);\n                    global_code = __wear_concat(global_code, "(");\n                    char* global_proto = "";\n                    if (returns_string(func_name)) {\n                        global_proto = __wear_concat(global_proto, "char* ");\n                    }\n                    else {\n                        global_proto = __wear_concat(global_proto, "int ");\n                    }\n                    global_proto = __wear_concat(global_proto, func_name);\n                    global_proto = __wear_concat(global_proto, "(");\n                    int skip_to_paren = 1;\n'''
