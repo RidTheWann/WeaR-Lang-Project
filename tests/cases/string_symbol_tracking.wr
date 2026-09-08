@@ -1,0 +1,14 @@
+// Deferred semantic regression: string variables must be resolved by declared type,
+// not by variable-name heuristics.
+//
+// This case intentionally uses names that must NOT be treated as strings by
+// naming convention alone.
+var caption = "WeaR symbol tracking OK"
+var total = 42
+var title = "deterministic"
+var index = 7
+
+cetak caption
+cetak total
+cetak title
+cetak index
