@@ -2,9 +2,10 @@
 """WeaR Lang command-line frontend.
 
 The frontend isolates compiler artifacts in a temporary workspace and provides
-one stable entry point for source validation, semantic lowering, transpilation,
-and native builds. The legacy Stage-0 compiler remains the backend while the
-frontend removes its historical dependence on variable-name-based typing.
+one stable entry point for localized source normalization, semantic validation,
+compatibility lowering, transpilation, and native builds. The legacy Stage-0
+compiler remains the backend while the frontend removes its historical
+identifier-name typing dependency.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from localization import normalize_file
 from semantic_contract import check_source
 from semantic_frontend import rewrite_file
 
@@ -58,6 +60,13 @@ def validate_source(source: Path) -> None:
     errors = check_source(source)
     if errors:
         raise ValueError("\n".join(errors))
+
+
+def prepare_source(source: Path, workdir: Path, language: str) -> Path:
+    """Normalize localized source into the canonical dialect in the build dir."""
+    normalized = workdir / "normalized.wr"
+    normalize_file(source, normalized, language)
+    return normalized
 
 
 def build_stage0(compiler_source: Path, runtime_source: Path, cc: str, workdir: Path) -> Path:
@@ -106,6 +115,7 @@ def compile_source(
     compiler_source: Path,
     runtime_source: Path,
     cc: str,
+    language: str,
     keep_c: bool,
     skip_semantic: bool,
 ) -> Path:
@@ -113,16 +123,17 @@ def compile_source(
     require_file(compiler_source, "compiler source")
     require_file(runtime_source, "runtime source")
 
-    if not skip_semantic:
-        validate_source(source)
-
     output = output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory(prefix="wear-build-") as temp:
         workdir = Path(temp)
+        normalized = prepare_source(source, workdir, language)
+        if not skip_semantic:
+            validate_source(normalized)
+
         compiler_exe = build_stage0(compiler_source, runtime_source, cc, workdir)
-        generated = transpile(compiler_exe, source.resolve(), workdir)
+        generated = transpile(compiler_exe, normalized, workdir)
         shutil.copy2(generated, output)
 
         if keep_c:
@@ -139,6 +150,7 @@ def command_compile(args: argparse.Namespace) -> int:
             compiler_source=Path(args.compiler),
             runtime_source=Path(args.runtime),
             cc=args.cc,
+            language=args.lang,
             keep_c=args.keep_c,
             skip_semantic=args.no_semantic_check,
         )
@@ -160,7 +172,9 @@ def command_run(args: argparse.Namespace) -> int:
         require_file(Path(args.compiler), "compiler source")
         require_file(Path(args.runtime), "runtime source")
         if not args.no_semantic_check:
-            validate_source(source)
+            with tempfile.TemporaryDirectory(prefix="wear-validate-") as temp:
+                normalized = prepare_source(source, Path(temp), args.lang)
+                validate_source(normalized)
     except FileNotFoundError as exc:
         return fail(str(exc), EXIT_USAGE)
     except ValueError as exc:
@@ -182,6 +196,7 @@ def command_run(args: argparse.Namespace) -> int:
                 compiler_source=Path(args.compiler),
                 runtime_source=Path(args.runtime),
                 cc=cc,
+                language=args.lang,
                 keep_c=False,
                 skip_semantic=args.no_semantic_check,
             )
@@ -203,13 +218,23 @@ def command_run(args: argparse.Namespace) -> int:
 
 
 def add_common_options(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--no-semantic-check", action="store_true", help="skip semantic validation and compatibility lowering")
+    parser.add_argument(
+        "--no-semantic-check",
+        action="store_true",
+        help="skip semantic validation while retaining localized-source normalization and compatibility lowering",
+    )
+    parser.add_argument(
+        "--lang",
+        choices=("auto", "id", "en"),
+        default="auto",
+        help="source dialect (default: auto; English keywords are normalized to the canonical Indonesian dialect)",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="wear",
-        description="Compile and run WeaR Lang programs with the native Stage-0 compiler.",
+        description="Compile and run WeaR Lang programs with localized syntax and the native Stage-0 backend.",
     )
     parser.add_argument("--version", action="version", version=f"WeaR Lang {VERSION}")
     parser.add_argument("--cc", default=os.environ.get("WEAR_CC", "gcc"), help="C compiler executable (default: gcc)")
