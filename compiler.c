@@ -606,9 +606,6 @@ int main(int argc, char* argv[]) {
     __wear_print_str("Loading: runtime.c");
     char* runtime_code = __wear_read_file("runtime.c");
     char* global_protos = "";
-    char* global_protos = "";
-    char* global_protos = "";
-    char* global_protos = "";
     char* global_code = "";
     char* main_code = "";
     char* nl = __wear_newline_char();
