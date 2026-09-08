@@ -9,47 +9,13 @@ on:
       - development
   workflow_dispatch:
 
-# Bootstrap execution only needs read access. The self-repair job below
-# receives write permission explicitly and is restricted to feature pushes.
 permissions:
   contents: read
 
 jobs:
-  stage0-repair:
-    name: Apply Stage-0 M1 source repairs
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feature/')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout feature branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref_name }}
-
-      - name: Apply deterministic repair codemod
-        run: python3 tools/repair_stage0.py
-
-      - name: Commit source repairs
-        run: |
-          if git diff --quiet; then
-            echo "No Stage-0 repairs required."
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add compiler.c compiler.wr runtime.c
-          git commit -m "fix(bootstrap): synchronize Stage-0 and Stage-1 sources"
-          git push origin HEAD:${{ github.ref_name }}
-
   bootstrap-experiment:
     name: Stage-0 -> Stage-1 -> Stage-2 reproducibility
-    needs: stage0-repair
-    if: always()
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
       - name: Checkout
@@ -60,3 +26,20 @@ jobs:
 
       - name: Run multi-stage bootstrap
         run: bash tools/bootstrap_smoke.sh
+
+  source-repair-check:
+    name: Verify repair codemod is idempotent
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify repair codemod is a no-op on committed sources
+        run: |
+          python3 tools/repair_stage0.py
+          if ! git diff --quiet; then
+            echo 'Committed compiler sources are not in canonical repaired form.'
+            git diff -- compiler.c compiler.wr runtime.c
+            exit 1
+          fi
