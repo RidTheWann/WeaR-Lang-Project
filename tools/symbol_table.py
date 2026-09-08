@@ -10,16 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from semantic_contract import FunctionSignature, INT, STR, UNKNOWN
-
-
-@dataclass(frozen=True)
-class Symbol:
-    name: str
-    type_name: str
-    line: int
-    scope: str
-    internal_name: str = ""
+from type_system import FunctionSignature, INT, STR, UNKNOWN, Symbol
 
 
 @dataclass(frozen=True)
