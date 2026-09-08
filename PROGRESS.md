@@ -11,7 +11,7 @@
 
 **Engineering branch:** `development`
 
-**Feature branch:** `feature/m2-bootstrap-hardening`
+**Feature branch:** `feature/m2-symbol-scope-parity`
 
 **Current phase:** M2 bootstrap hardening
 
@@ -58,6 +58,8 @@
 - [x] Add an M1 full compiler/tooling suite covering Python syntax, semantic fixtures, native symbol-table contract compilation, native regression tests, and bootstrap auditing.
 - [x] Add a native integration audit that verifies compiler.c, native symbol-table APIs, and the string symbol regression fixture remain wired together.
 - [x] Add the native integration audit as a required CI job for feature branches and pull requests.
+- [x] Add a dedicated native symbol-table contract CI job with strict compiler warnings.
+- [x] Harden the native symbol table against duplicate same-scope variable and function declarations.
 
 ### Compiler core
 - [x] Extend Stage-0 string-return detection for `input()` and `process_imports()`.
@@ -167,8 +169,9 @@
 ## Change Log
 
 ### 2026-09-08
-- Merged PR #5 into `development`.
-- Started `feature/m2-bootstrap-hardening` from the merged `development` tip.
-- Added `tools/audit_native_integration.py` to make the native symbol-table seam mechanically visible and prevent accidental bypasses.
-- Added the native integration audit as a required CI job.
-- Current blocker remains the genuine Stage-0/Stage-1 semantic parity work: the bootstrap run exposed type drift inside the self-hosted compiler, so self-hosting is not yet considered release-ready.
+- Merged PR #7 into `development`.
+- Started `feature/m2-symbol-scope-parity` from the merged `development` tip.
+- Hardened the native symbol table so duplicate declarations in the same variable scope or function namespace are rejected instead of silently creating conflicting entries.
+- Expanded the native contract test to verify duplicate-declaration rejection and preservation of the original type/signature.
+- Added a dedicated strict-warning native symbol-table CI job (`-Wall -Wextra -Werror`).
+- Bootstrap Stage-0/Stage-1 semantic parity remains the main compiler blocker; this branch strengthens the symbol-table contract before the next compiler-core synchronization pass.
