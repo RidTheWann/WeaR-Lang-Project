@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI adapter for the canonical WeaR Lang semantic contract."""
+"""CLI adapter for the canonical WeaR Lang semantic engine."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import argparse
 from pathlib import Path
 import sys
 
-from semantic_contract import check_source
+from semantic_engine import check_source
 
 
 def main() -> int:
