@@ -13,8 +13,9 @@ from __future__ import annotations
 from pathlib import Path
 import re
 
-from semantic_contract import FunctionSignature, INT, STR, UNKNOWN, expression_type
+from semantic_contract import expression_type
 from symbol_table import SymbolTable
+from type_system import FunctionSignature, INT, STR, UNKNOWN
 
 IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 VAR_DECL = re.compile(r"^\s*var\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$")
@@ -46,11 +47,7 @@ def _split_code_and_tail(line: str) -> tuple[str, str]:
     return line, ""
 
 
-def _rename_identifiers(
-    line: str,
-    mapping: dict[str, str],
-    function_names: set[str] | None = None,
-) -> str:
+def _rename_identifiers(line: str, mapping: dict[str, str], function_names: set[str] | None = None) -> str:
     """Rename variable references without rewriting the function namespace."""
     code, comment = _split_code_and_tail(line)
     functions = function_names or set()
@@ -73,11 +70,7 @@ def _rename_identifiers(
                 next_pos = end
                 while next_pos < len(code) and code[next_pos].isspace():
                     next_pos += 1
-                is_function_reference = (
-                    next_pos < len(code)
-                    and code[next_pos] == "("
-                    and word in functions
-                )
+                is_function_reference = next_pos < len(code) and code[next_pos] == "(" and word in functions
                 out.append(word if is_function_reference else mapping.get(word, word))
                 pos = end
                 continue
@@ -110,7 +103,6 @@ def rewrite_source(text: str) -> str:
     function_names: set[str] = set()
     mappings_by_scope: dict[str, dict[str, str]] = {"global": {}}
 
-    # Collect the function namespace before rewriting any variable reference.
     for raw in lines:
         fn = FUNCTION.match(raw)
         if fn:
