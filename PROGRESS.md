@@ -50,6 +50,13 @@
 - [x] Create this persistent progress tracker.
 - [x] Document the bootstrap contract and release gate policy.
 - [x] Record the current Stage-0/Stage-1 synchronization blocker as GitHub issue #1.
+- [x] Document the M1 feature-branch validation workflow.
+- [x] Document the current compiler architecture and Stage-0/Stage-1 drift model.
+- [x] Formalize the repository branching policy.
+
+### Regression surface
+- [x] Add deferred coverage fixtures for string concatenation, typed parameters, `tapi_jika`, `input()`, and imports.
+- [x] Document the distinction between active baseline tests and deferred compiler-surface tests.
 
 ---
 
@@ -71,8 +78,9 @@
 
 ### Testing
 - [ ] Verify the complete native regression suite in GitHub Actions.
-- [ ] Add tests for strings and concatenation edge cases.
-- [ ] Add tests for arrays, imports, and input.
+- [ ] Promote string concatenation into active CI after deterministic type handling is available.
+- [ ] Promote typed functions, `tapi_jika`, `input()`, and imports after Stage-0 synchronization.
+- [ ] Add tests for arrays and broader collection behavior.
 - [ ] Add negative tests for syntax/type errors.
 - [ ] Add bootstrap/self-hosting tests.
 - [ ] Add generated-C compilation tests with a strict warning policy.
@@ -151,6 +159,7 @@
 - [ ] Regression suite verified in CI
 - [x] Bootstrap capability drift is now observable and tracked
 - [x] Stage-0/Stage-1 audit is bidirectional
+- [x] Deferred regression surface is documented
 
 ### M2 — Self-Hosting Hardening
 - [ ] Reproducible bootstrap
@@ -194,3 +203,6 @@
 - Added a visible CI bootstrap-audit job with non-gating behavior until Issue #1 is resolved.
 - Strengthened bootstrap auditing so both Stage-0 and Stage-1 capabilities are checked explicitly.
 - Created `feature/m1-regression-hardening` from `development` for the next isolated engineering batch.
+- Added M1 workflow and compiler architecture documentation.
+- Formalized the repository branching policy.
+- Added deferred regression fixtures for string concatenation, typed parameters, `tapi_jika`, `input()`, and imports.
