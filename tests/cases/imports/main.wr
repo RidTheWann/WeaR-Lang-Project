@@ -1,0 +1,2 @@
+impor "tests/cases/imports/lib.wr"
+cetak imported_message
