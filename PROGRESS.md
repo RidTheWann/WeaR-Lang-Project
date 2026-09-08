@@ -11,9 +11,11 @@
 
 **Engineering branch:** `development`
 
+**Feature branch:** `feature/m1-regression-hardening`
+
 **Current phase:** Core compiler stabilization and self-hosting hardening
 
-**Current engineering focus:** Establish a dependable native regression baseline, harden the runtime, then synchronize Stage-0 with the current self-hosted compiler.
+**Current engineering focus:** Establish a dependable native regression baseline, harden the runtime, and synchronize Stage-0 with the current self-hosted compiler.
 
 ---
 
@@ -33,7 +35,8 @@
 - [x] Add repository hygiene checks for generated build artifacts and required project docs.
 - [x] Add manual workflow dispatch support for CI.
 - [x] Add a structural Stage-0/Stage-1 capability audit under `tools/audit_bootstrap.py`.
-- [x] Make the bootstrap audit visible in CI without turning the known M1 drift into a false-green release gate.
+- [x] Make bootstrap capability drift visible in CI without turning the known M1 mismatch into a false-green release gate.
+- [x] Strengthen the bootstrap audit so Stage-0 and Stage-1 requirements are checked bidirectionally.
 - [x] Document the development/stable branch model.
 
 ### Runtime
@@ -124,6 +127,13 @@
 6. **Every major compiler change should include a regression test.**
 7. **Self-hosting must remain reproducible.**
 
+## Branch Policy
+
+- `main` is stable-only.
+- `development` is the integration branch for completed engineering work.
+- Short-lived feature branches may be created from `development` and must target `development` for review.
+- Never create experimental branches from `main`.
+
 ---
 
 ## Milestones
@@ -140,6 +150,7 @@
 - [ ] Diagnostics with line/column
 - [ ] Regression suite verified in CI
 - [x] Bootstrap capability drift is now observable and tracked
+- [x] Stage-0/Stage-1 audit is bidirectional
 
 ### M2 — Self-Hosting Hardening
 - [ ] Reproducible bootstrap
@@ -181,3 +192,5 @@
 - Added `tools/audit_bootstrap.py` to make Stage-0/Stage-1 capability drift measurable.
 - Added `docs/bootstrap-contract.md` defining the canonical-source and release-gate bootstrap invariants.
 - Added a visible CI bootstrap-audit job with non-gating behavior until Issue #1 is resolved.
+- Strengthened bootstrap auditing so both Stage-0 and Stage-1 capabilities are checked explicitly.
+- Created `feature/m1-regression-hardening` from `development` for the next isolated engineering batch.
