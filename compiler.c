@@ -7,20 +7,38 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 /* String concatenation helper */
-char* __wear_concat(const char* a, const char* b) {
+char* __wear_concat2(const char* a, const char* b) {
+    if (a == NULL) a = "";
+    if (b == NULL) b = "";
     size_t len_a = strlen(a);
     size_t len_b = strlen(b);
+    if (len_a > SIZE_MAX - len_b - 1) {
+        fprintf(stderr, "Error: String size overflow\n");
+        exit(1);
+    }
     char* result = (char*)malloc(len_a + len_b + 1);
     if (result == NULL) {
         fprintf(stderr, "Error: Memory allocation failed\n");
         exit(1);
     }
-    strcpy(result, a);
-    strcat(result, b);
+    memcpy(result, a, len_a);
+    memcpy(result + len_a, b, len_b + 1);
     return result;
 }
+
+char* __wear_concat3(const char* a, const char* b, const char* c) {
+    char* first = __wear_concat2(a, b);
+    char* result = __wear_concat2(first, c);
+    free(first);
+    return result;
+}
+
+#define __wear_concat_pick(_1, _2, _3, NAME, ...) NAME
+#define __wear_concat(...) \
+    __wear_concat_pick(__VA_ARGS__, __wear_concat3, __wear_concat2)(__VA_ARGS__)
 
 /* Integer to string helper */
 char* __wear_int_to_str(int value) {
@@ -403,6 +421,12 @@ int returns_string(char* fn) {
         return 1;
     }
     if (__wear_streq(fn, "newline_char")) {
+        return 1;
+    }
+    if (__wear_streq(fn, "input")) {
+        return 1;
+    }
+    if (__wear_streq(fn, "process_imports")) {
         return 1;
     }
     return 0;
@@ -1357,7 +1381,12 @@ int main(int argc, char* argv[]) {
                             }
                         }
                     }
-                    global_code = __wear_concat(global_code, "int ");
+                    if (returns_string(func_name)) {
+                        global_code = __wear_concat(global_code, "char* ");
+                    }
+                    else {
+                        global_code = __wear_concat(global_code, "int ");
+                    }
                     global_code = __wear_concat(global_code, func_name);
                     global_code = __wear_concat(global_code, "(");
                     int skip_to_paren = 1;
