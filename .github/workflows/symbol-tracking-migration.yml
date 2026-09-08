@@ -1,0 +1,42 @@
+name: WeaR Lang Symbol Tracking Migration
+
+on:
+  push:
+    branches:
+      - feature/m1-regression-hardening
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.event.head_commit.message == 'refactor(compiler): prepare deterministic symbol tracking migration'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/m1-regression-hardening
+      - name: Apply migration
+        run: python3 tools/enable_symbol_tracking.py
+      - name: Validate migrated sources
+        run: |
+          gcc -std=c11 -Wall -Wextra -O2 -Wno-unused-parameter -Wno-unused-result compiler.c -o /tmp/wear-stage0
+          python3 - <<'PY'
+          from pathlib import Path
+          for path in (Path('compiler.c'), Path('compiler.wr')):
+              text = path.read_text(encoding='utf-8')
+              assert 'is_tracked_string_var' in text, path
+              assert 'string_vars' in text, path
+          PY
+      - name: Commit migration
+        run: |
+          if git diff --quiet; then
+            echo 'No migration changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add compiler.c compiler.wr
+          git commit -m 'refactor(compiler): enable deterministic string symbol tracking'
+          git push origin HEAD:feature/m1-regression-hardening
