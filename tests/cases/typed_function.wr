@@ -1,0 +1,7 @@
+// Typed-parameter syntax reserved for the synchronized Stage-0 bootstrap.
+fungsi tambah(a: int, b: int) {
+    kembalikan a + b
+}
+
+var result = tambah(20, 22)
+cetak result

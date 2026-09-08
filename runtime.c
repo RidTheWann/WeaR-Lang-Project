@@ -103,12 +103,23 @@ char* __wear_concat_str_int(const char* s, int n) {
     return result;
 }
 
-/* Generic string/int concatenation dispatch. */
-#define __wear_concat(a, b) _Generic((b), \
+/* Three-operand string concatenation helper for legacy generated code. */
+char* __wear_concat3(const char* a, const char* b, const char* c) {
+    char* first = __wear_concat_impl(a, b);
+    char* result = __wear_concat_impl(first, c);
+    free(first);
+    return result;
+}
+
+#define __wear_concat2(a, b) _Generic((b), \
     int: __wear_concat_str_int, \
     char*: __wear_concat_impl, \
     const char*: __wear_concat_impl \
 )(a, b)
+
+#define __wear_concat_pick(_1, _2, _3, NAME, ...) NAME
+#define __wear_concat(...) \
+    __wear_concat_pick(__VA_ARGS__, __wear_concat3, __wear_concat2)(__VA_ARGS__)
 
 /* Int + string concatenation. */
 char* __wear_concat_int_str(int n, const char* s) {

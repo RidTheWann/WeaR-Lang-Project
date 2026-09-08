@@ -1,0 +1,10 @@
+// Global symbols must remain visible to function semantic analysis.
+var greeting = "hello"
+var base = 7
+
+fungsi show() {
+    cetak greeting
+    kembalikan base
+}
+
+show()

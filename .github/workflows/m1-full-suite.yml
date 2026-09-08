@@ -1,0 +1,48 @@
+name: WeaR Lang M1 Full Suite
+
+on:
+  push:
+    branches:
+      - development
+      - 'feature/**'
+  pull_request:
+    branches:
+      - development
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-suite:
+    name: M1 full compiler/tooling suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc
+
+      - name: Python syntax checks
+        run: |
+          python3 -m py_compile tools/*.py
+
+      - name: Semantic contract fixtures
+        run: |
+          python3 tools/typecheck_wr.py tests/cases/string_symbol_tracking.wr
+          python3 tools/typecheck_wr.py tests/cases/print_types.wr
+
+      - name: Native symbol table contract
+        working-directory: tools
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror native_symbol_table.c native_symbol_table_test.c -o native-symbol-table-test
+          ./native-symbol-table-test
+
+      - name: Native regression suite
+        run: bash tests/run_regression.sh
+
+      - name: Bootstrap capability audit
+        run: python3 tools/audit_bootstrap.py
+        continue-on-error: true

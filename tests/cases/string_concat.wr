@@ -1,0 +1,7 @@
+// String concatenation regression surface.
+// This case is intentionally separate from the baseline suite until
+// Stage-0 string type inference is made deterministic.
+var first = "WeaR"
+var second = " Lang"
+var message = first + second
+cetak message

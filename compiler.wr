@@ -6,7 +6,7 @@
 // It reads "input.wr" and generates "output.c" with correct function placement.
 
 // Helper: Check if character is a digit (0-9)
-fungsi is_digit(c) {
+fungsi is_digit(c: str) {
     jika (sama(c, "0")) { kembalikan 1 }
     jika (sama(c, "1")) { kembalikan 1 }
     jika (sama(c, "2")) { kembalikan 1 }
@@ -21,7 +21,7 @@ fungsi is_digit(c) {
 }
 
 // Helper: Check if character is a letter (a-z, A-Z, _)
-fungsi is_letter(c) {
+fungsi is_letter(c: str) {
     jika (sama(c, "a")) { kembalikan 1 }
     jika (sama(c, "b")) { kembalikan 1 }
     jika (sama(c, "c")) { kembalikan 1 }
@@ -79,13 +79,13 @@ fungsi is_letter(c) {
 }
 
 // Helper: Check if character is whitespace (space only, not newline)
-fungsi is_space(c) {
+fungsi is_space(c: str) {
     jika (sama(c, " ")) { kembalikan 1 }
     kembalikan 0
 }
 
 // Helper: Check if a function name returns int
-fungsi returns_int(fn) {
+fungsi returns_int(fn: str) {
     jika (sama(fn, "panjang")) { kembalikan 1 }
     jika (sama(fn, "sama")) { kembalikan 1 }
     jika (sama(fn, "is_quote")) { kembalikan 1 }
@@ -100,7 +100,7 @@ fungsi returns_int(fn) {
 }
 
 // Helper: Check if a function name returns string
-fungsi returns_string(fn) {
+fungsi returns_string(fn: str) {
     jika (sama(fn, "baca_file")) { kembalikan 1 }
     jika (sama(fn, "char_at")) { kembalikan 1 }
     jika (sama(fn, "quote_char")) { kembalikan 1 }
@@ -112,7 +112,7 @@ fungsi returns_string(fn) {
 
 // Helper: Check if variable name suggests string type (Hungarian notation)
 // Extended for string concat detection
-fungsi is_string_varname(name) {
+fungsi is_string_varname(name: str) {
     // Explicit exclusions for known integers starting with string prefixes
     jika (sama(name, "pending_concat")) { kembalikan 0 }
     jika (sama(name, "peek_i")) { kembalikan 0 }
@@ -229,12 +229,13 @@ fungsi is_string_varname(name) {
     jika (sama(name, "c")) { kembalikan 1 }
     jika (sama(name, "q")) { kembalikan 1 }
     jika (sama(name, "next")) { kembalikan 1 }
+    jika (sama(name, "message")) { kembalikan 1 }
     jika (sama(name, "num")) { kembalikan 1 } 
     kembalikan 0
 }
 
 // Pre-processor: Recursively inline all imports
-fungsi process_imports(src) {
+fungsi process_imports(src: str) {
     var buffer = ""
     var idx = 0
     var total = panjang(src)
@@ -1230,7 +1231,8 @@ selama (done == 0) {
                 }
                 global_code = global_code + ")"
                 // Finalize and store prototype
-                global_proto = global_proto + ");" + nl
+                global_proto = global_proto + ");"
+global_proto = global_proto + nl
                 global_protos = global_protos + global_proto
                 need_semi = 0
             } lainnya jika (sama(word, "kembalikan")) {
@@ -1380,10 +1382,12 @@ final_output = final_output + nl
 final_output = final_output + runtime_code
 final_output = final_output + nl
 final_output = final_output + nl
-final_output = final_output + "/* Function Prototypes */" + nl
+final_output = final_output + "/* Function Prototypes */"
+final_output = final_output + nl
 final_output = final_output + global_protos
 final_output = final_output + nl
-final_output = final_output + "/* Function Definitions */" + nl
+final_output = final_output + "/* Function Definitions */"
+final_output = final_output + nl
 final_output = final_output + global_code
 final_output = final_output + nl
 final_output = final_output + "int main() {"

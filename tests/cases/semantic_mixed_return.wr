@@ -1,0 +1,7 @@
+// A function with incompatible return types must not silently infer int.
+fungsi unstable(flag: int) {
+    jika (flag) {
+        kembalikan 1
+    }
+    kembalikan "not an int"
+}

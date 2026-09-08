@@ -1,0 +1,45 @@
+name: WeaR Lang Bootstrap Check
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+  pull_request:
+    branches:
+      - development
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap-experiment:
+    name: Stage-0 -> Stage-1 -> Stage-2 reproducibility
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install GCC
+        run: sudo apt-get update && sudo apt-get install -y gcc
+
+      - name: Run multi-stage bootstrap
+        run: bash tools/bootstrap_smoke.sh
+
+  source-repair-check:
+    name: Verify repair codemod is idempotent
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify repair codemod is a no-op on committed sources
+        run: |
+          python3 tools/repair_stage0.py
+          if ! git diff --quiet; then
+            echo 'Committed compiler sources are not in canonical repaired form.'
+            git diff -- compiler.c compiler.wr runtime.c
+            exit 1
+          fi
