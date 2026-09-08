@@ -12,14 +12,17 @@ on:
       - development
   workflow_dispatch:
 
+# PR/test jobs do not need repository write access.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   stage0-repair:
     name: Apply Stage-0 M1 source repairs
     if: github.event_name == 'push' && github.ref == 'refs/heads/feature/m1-regression-hardening'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout feature branch
@@ -39,7 +42,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add compiler.c runtime.c
+          git add compiler.c compiler.wr runtime.c
           git commit -m "fix(compiler): repair Stage-0 bootstrap compatibility"
           git push origin HEAD:feature/m1-regression-hardening
 
