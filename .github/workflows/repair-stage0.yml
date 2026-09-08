@@ -1,0 +1,36 @@
+name: Apply Stage-0 M1 Repairs
+
+on:
+  push:
+    branches:
+      - feature/m1-regression-hardening
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    name: Apply deterministic Stage-0 repairs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/m1-regression-hardening
+
+      - name: Apply codemod
+        run: python3 tools/repair_stage0.py
+
+      - name: Commit source repairs
+        run: |
+          if git diff --quiet; then
+            echo "No Stage-0 repairs required."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add compiler.c runtime.c
+          git commit -m "fix(compiler): repair Stage-0 bootstrap compatibility"
+          git push origin HEAD:feature/m1-regression-hardening
