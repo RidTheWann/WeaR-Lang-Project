@@ -9,14 +9,18 @@ on:
       - development
   workflow_dispatch:
 
+# Bootstrap execution only needs read access. The self-repair job below
+# receives write permission explicitly and is restricted to feature pushes.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   stage0-repair:
     name: Apply Stage-0 M1 source repairs
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feature/')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout feature branch
