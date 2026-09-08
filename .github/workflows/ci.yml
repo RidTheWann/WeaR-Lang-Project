@@ -30,6 +30,27 @@ jobs:
       - name: Run native regression suite
         run: bash tests/run_regression.sh
 
+  native-symbol-contract:
+    name: Native symbol-table contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc
+
+      - name: Build native symbol-table contract test
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror \
+            tools/native_symbol_table.c \
+            tools/native_symbol_table_test.c \
+            -o native-symbol-table-test
+
+      - name: Run native symbol-table contract test
+        run: ./native-symbol-table-test
+
   native-integration-audit:
     name: Native symbol integration audit
     runs-on: ubuntu-latest
