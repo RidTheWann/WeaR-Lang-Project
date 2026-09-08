@@ -1,0 +1,6 @@
+// Print dispatch regression: string literal, string variable, and integer variable.
+var message = "WeaR print string OK"
+var answer = 42
+cetak "literal OK"
+cetak message
+cetak answer
