@@ -10,11 +10,40 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  stage0-repair:
+    name: Apply Stage-0 M1 source repairs
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feature/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Apply deterministic repair codemod
+        run: python3 tools/repair_stage0.py
+
+      - name: Commit source repairs
+        run: |
+          if git diff --quiet; then
+            echo "No Stage-0 repairs required."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add compiler.c runtime.c
+          git commit -m "fix(compiler): repair Stage-0 bootstrap compatibility"
+          git push origin HEAD:${{ github.ref_name }}
+
   bootstrap-experiment:
     name: Stage-0 -> Stage-1 -> Stage-2 reproducibility
+    needs: stage0-repair
+    if: always()
     runs-on: ubuntu-latest
     continue-on-error: true
 
