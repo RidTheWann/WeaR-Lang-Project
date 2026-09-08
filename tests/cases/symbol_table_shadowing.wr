@@ -1,0 +1,16 @@
+// Deterministic symbol resolution regression.
+// A local variable may share a name with a global variable and a function.
+var value = 10
+
+fungsi value(name: str) {
+    kembalikan name
+}
+
+fungsi demo(value: int) {
+    var message = value
+    cetak message
+    kembalikan message
+}
+
+cetak value
+demo(7)
