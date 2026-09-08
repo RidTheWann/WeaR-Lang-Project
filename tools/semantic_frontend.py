@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 import re
 
-from semantic_contract import expression_type
+from semantic_engine import expression_type
 from symbol_table import SymbolTable
 from type_system import FunctionSignature, INT, STR, UNKNOWN
 
@@ -161,7 +161,7 @@ def rewrite_source(text: str) -> str:
             symbol = table.resolve(name, scope=function_scope)
             if symbol:
                 typ = _infer_type(expr, table.visible(function_scope))
-                if typ != UNKNOWN:
+                if typ != UNKNOWN and typ == symbol.type_name:
                     table.update_type(name, typ, scope=function_scope)
             continue
 
