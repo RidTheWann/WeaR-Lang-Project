@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Canonical deterministic semantic contract for the current WeaR syntax.
+"""Canonical semantic contract for the current WeaR Lang compiler surface.
 
-This module is the frontend semantic layer used before the legacy Stage-0
-compiler. It deliberately tracks declared types rather than variable names.
+This module provides deterministic primitive types, function signatures,
+symbol tracking, expression inference, and source diagnostics.  It is
+intentionally independent from compiler.c while the compiler core is being
+migrated away from identifier-name heuristics.
 """
 
 from __future__ import annotations
@@ -14,12 +16,32 @@ import re
 INT = "int"
 STR = "str"
 UNKNOWN = "unknown"
+ERROR = "error"
 
 
 @dataclass(frozen=True)
 class FunctionSignature:
     return_type: str
     params: tuple[str, ...] = ()
+    line: int = 0
+
+
+@dataclass(frozen=True)
+class Symbol:
+    name: str
+    type_name: str
+    line: int
+    scope: str = "global"
+
+
+@dataclass(frozen=True)
+class Diagnostic:
+    line: int
+    column: int
+    message: str
+
+    def render(self, source: Path) -> str:
+        return f"{source}:{self.line}:{self.column}: {self.message}"
 
 
 BUILTINS: dict[str, FunctionSignature] = {
@@ -39,16 +61,11 @@ BUILTINS: dict[str, FunctionSignature] = {
 
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 INTEGER_RE = re.compile(r"^-?[0-9]+$")
+FUNCTION_RE = re.compile(r"^\s*fungsi\s+([A-Za-z_][A-Za-z0-9_]*)\s*\((.*?)\)\s*\{?\s*$")
 VAR_RE = re.compile(r"^\s*var\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$")
 ASSIGN_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$")
 CETAK_RE = re.compile(r"^\s*cetak\s+(.+?)\s*$")
-
-
-@dataclass(frozen=True)
-class Symbol:
-    name: str
-    type_name: str
-    line: int
+RETURN_RE = re.compile(r"^\s*kembalikan(?:\s+(.*?))?\s*$")
 
 
 def is_identifier(value: str) -> bool:
@@ -61,6 +78,8 @@ def literal_type(expr: str) -> str:
         return STR
     if INTEGER_RE.fullmatch(value):
         return INT
+    if value in {"benar", "salah", "true", "false"}:
+        return INT
     return UNKNOWN
 
 
@@ -68,75 +87,342 @@ def builtin_signature(name: str) -> FunctionSignature | None:
     return BUILTINS.get(name)
 
 
-def expression_type(expr: str, symbols: dict[str, Symbol]) -> str:
+def _strip_comment(line: str) -> str:
+    in_string = False
+    escaped = False
+    for index, char in enumerate(line):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\" and in_string:
+            escaped = True
+            continue
+        if char == '"':
+            in_string = not in_string
+            continue
+        if not in_string and line[index:index + 2] == "//":
+            return line[:index]
+    return line
+
+
+def _unwrap_parentheses(expr: str) -> str:
     value = expr.strip()
+    while len(value) >= 2 and value[0] == "(" and value[-1] == ")":
+        depth = 0
+        in_string = False
+        escaped = False
+        encloses = True
+        for index, char in enumerate(value):
+            if escaped:
+                escaped = False
+            elif char == "\\" and in_string:
+                escaped = True
+            elif char == '"':
+                in_string = not in_string
+            elif not in_string:
+                if char == "(":
+                    depth += 1
+                elif char == ")":
+                    depth -= 1
+                    if depth == 0 and index != len(value) - 1:
+                        encloses = False
+                        break
+        if encloses and depth == 0:
+            value = value[1:-1].strip()
+        else:
+            break
+    return value
+
+
+def _split_top_level(expr: str, operator: str) -> list[str]:
+    parts: list[str] = []
+    depth = 0
+    start = 0
+    in_string = False
+    escaped = False
+    index = 0
+    while index < len(expr):
+        char = expr[index]
+        if escaped:
+            escaped = False
+        elif char == "\\" and in_string:
+            escaped = True
+        elif char == '"':
+            in_string = not in_string
+        elif not in_string:
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth = max(0, depth - 1)
+            elif depth == 0 and expr.startswith(operator, index):
+                parts.append(expr[start:index].strip())
+                start = index + len(operator)
+                index += len(operator) - 1
+        index += 1
+    if parts:
+        parts.append(expr[start:].strip())
+    return parts
+
+
+def _split_call(expr: str) -> tuple[str, str] | None:
+    value = _unwrap_parentheses(expr)
+    opening = value.find("(")
+    if opening <= 0 or not value.endswith(")"):
+        return None
+    name = value[:opening].strip()
+    if not is_identifier(name):
+        return None
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(opening, len(value)):
+        char = value[index]
+        if escaped:
+            escaped = False
+        elif char == "\\" and in_string:
+            escaped = True
+        elif char == '"':
+            in_string = not in_string
+        elif not in_string:
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+                if depth == 0 and index != len(value) - 1:
+                    return None
+    return (name, value[opening + 1:-1].strip()) if depth == 0 else None
+
+
+def _split_arguments(arguments: str) -> list[str]:
+    if not arguments.strip():
+        return []
+    parts: list[str] = []
+    start = 0
+    depth = 0
+    in_string = False
+    escaped = False
+    for index, char in enumerate(arguments):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\" and in_string:
+            escaped = True
+            continue
+        if char == '"':
+            in_string = not in_string
+        elif not in_string:
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth = max(0, depth - 1)
+            elif char == "," and depth == 0:
+                parts.append(arguments[start:index].strip())
+                start = index + 1
+    parts.append(arguments[start:].strip())
+    return parts
+
+
+def expression_type(
+    expr: str,
+    symbols: dict[str, Symbol],
+    functions: dict[str, FunctionSignature] | None = None,
+) -> str:
+    value = _unwrap_parentheses(expr)
     direct = literal_type(value)
     if direct != UNKNOWN:
         return direct
 
     if is_identifier(value):
         symbol = symbols.get(value)
-        if symbol:
-            return symbol.type_name
-        builtin = builtin_signature(value)
-        return builtin.return_type if builtin else UNKNOWN
+        return symbol.type_name if symbol else UNKNOWN
 
-    call = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*\(", value)
+    functions = functions or BUILTINS
+    call = _split_call(value)
     if call:
-        builtin = builtin_signature(call.group(1))
-        if builtin:
-            return builtin.return_type
+        name, arguments = call
+        signature = functions.get(name) or BUILTINS.get(name)
+        if signature is None:
+            return UNKNOWN
+        args = _split_arguments(arguments)
+        if len(args) != len(signature.params):
+            return ERROR
+        for argument, expected in zip(args, signature.params):
+            actual = expression_type(argument, symbols, functions)
+            if actual not in {UNKNOWN, ERROR} and actual != expected:
+                return ERROR
+        return signature.return_type
 
-    if "+" in value:
-        parts = [part.strip() for part in value.split("+")]
-        types = [expression_type(part, symbols) for part in parts]
-        if STR in types:
-            return STR
-        if types and all(item == INT for item in types):
-            return INT
+    for operator in ("==", "<=", ">=", "<", ">"):
+        parts = _split_top_level(value, operator)
+        if len(parts) == 2:
+            left = expression_type(parts[0], symbols, functions)
+            right = expression_type(parts[1], symbols, functions)
+            return ERROR if ERROR in {left, right} else INT
 
-    if any(op in value for op in ("==", "<=", ">=", "<", ">")):
-        return INT
+    for operator in ("+", "-", "*", "/"):
+        parts = _split_top_level(value, operator)
+        if len(parts) >= 2:
+            types = [expression_type(part, symbols, functions) for part in parts]
+            if ERROR in types:
+                return ERROR
+            if operator == "+" and STR in types:
+                return STR
+            if all(item == INT for item in types):
+                return INT
+            return UNKNOWN
 
     return UNKNOWN
 
 
-def check_source(path: Path) -> list[str]:
-    symbols: dict[str, Symbol] = {}
-    errors: list[str] = []
+def _parameter_types(text: str) -> tuple[str, ...]:
+    result: list[str] = []
+    for raw in _split_arguments(text):
+        if not raw:
+            continue
+        pieces = raw.split(":", 1)
+        type_name = pieces[1].strip() if len(pieces) == 2 else UNKNOWN
+        result.append(type_name if type_name in {INT, STR} else UNKNOWN)
+    return tuple(result)
 
-    for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("//"):
+
+def _collect_functions(lines: list[str]) -> dict[str, FunctionSignature]:
+    functions = dict(BUILTINS)
+    declarations: dict[str, tuple[int, str]] = {}
+    for lineno, raw in enumerate(lines, 1):
+        match = FUNCTION_RE.match(_strip_comment(raw).strip())
+        if match:
+            name, params = match.groups()
+            functions[name] = FunctionSignature(UNKNOWN, _parameter_types(params), lineno)
+            declarations[name] = (lineno, params)
+
+    for name, (start_line, params) in declarations.items():
+        signature = functions[name]
+        parameter_names = [p.split(":", 1)[0].strip() for p in _split_arguments(params) if p.strip()]
+        local = {
+            parameter_names[i]: Symbol(parameter_names[i], signature.params[i], start_line, name)
+            for i in range(min(len(parameter_names), len(signature.params)))
+        }
+        depth = 0
+        saw_body = False
+        return_types: set[str] = set()
+        for index in range(start_line - 1, len(lines)):
+            text = _strip_comment(lines[index]).strip()
+            depth += text.count("{") - text.count("}")
+            if "{" in text:
+                saw_body = True
+            if saw_body:
+                match = RETURN_RE.match(text)
+                if match and match.group(1):
+                    result = expression_type(match.group(1), local, functions)
+                    if result in {INT, STR}:
+                        return_types.add(result)
+            if saw_body and depth <= 0:
+                break
+        inferred = STR if STR in return_types else INT
+        functions[name] = FunctionSignature(inferred, signature.params, start_line)
+    return functions
+
+
+def check_source(path: str | Path) -> list[str]:
+    source = Path(path)
+    lines = source.read_text(encoding="utf-8").splitlines()
+    functions = _collect_functions(lines)
+    diagnostics: list[Diagnostic] = []
+    global_symbols: dict[str, Symbol] = {}
+    local_symbols: dict[str, Symbol] | None = None
+    active_function: str | None = None
+    brace_depth = 0
+
+    for lineno, raw in enumerate(lines, 1):
+        line = _strip_comment(raw)
+        stripped = line.strip()
+        if not stripped:
             continue
 
-        match = VAR_RE.match(raw)
+        function_match = FUNCTION_RE.match(stripped)
+        if function_match:
+            active_function = function_match.group(1)
+            local_symbols = {}
+            signature = functions.get(active_function, FunctionSignature(UNKNOWN))
+            params = _split_arguments(function_match.group(2))
+            for index, raw_param in enumerate(params):
+                if not raw_param.strip():
+                    continue
+                pieces = raw_param.split(":", 1)
+                name = pieces[0].strip()
+                type_name = pieces[1].strip() if len(pieces) == 2 else UNKNOWN
+                if type_name not in {INT, STR}:
+                    diagnostics.append(Diagnostic(lineno, max(1, line.find(name) + 1), f"parameter '{name}' requires : int or : str"))
+                local_symbols[name] = Symbol(name, type_name, lineno, active_function)
+            brace_depth = stripped.count("{") - stripped.count("}")
+            continue
+
+        symbols = local_symbols if active_function else global_symbols
+        brace_depth += stripped.count("{") - stripped.count("}") if active_function else 0
+
+        match = VAR_RE.match(stripped)
         if match:
             name, expr = match.groups()
-            value_type = expression_type(expr, symbols)
+            value_type = expression_type(expr, symbols, functions)
             if value_type == UNKNOWN:
-                errors.append(f"{path}:{lineno}: cannot determine type of initializer for '{name}'")
-            symbols[name] = Symbol(name, value_type, lineno)
+                diagnostics.append(Diagnostic(lineno, max(1, line.find(expr) + 1), f"cannot infer type of initializer for '{name}'"))
+            elif value_type == ERROR:
+                diagnostics.append(Diagnostic(lineno, max(1, line.find(expr) + 1), f"invalid initializer expression for '{name}'"))
+            symbols[name] = Symbol(name, value_type, lineno, active_function or "global")
             continue
 
-        match = ASSIGN_RE.match(raw)
-        if match and not line.startswith(("jika", "lainnya", "selama", "fungsi")):
+        match = ASSIGN_RE.match(stripped)
+        if match and not stripped.startswith(("jika", "lainnya", "selama", "fungsi")):
             name, expr = match.groups()
-            if name in symbols:
-                value_type = expression_type(expr, symbols)
-                old_type = symbols[name].type_name
-                if value_type != UNKNOWN and old_type != UNKNOWN and value_type != old_type:
-                    errors.append(
-                        f"{path}:{lineno}: assignment type mismatch for '{name}': "
-                        f"declared {old_type}, assigned {value_type}"
-                    )
+            symbol = symbols.get(name)
+            if symbol is None:
+                diagnostics.append(Diagnostic(lineno, max(1, line.find(name) + 1), f"assignment to undeclared variable '{name}'"))
+            else:
+                value_type = expression_type(expr, symbols, functions)
+                if value_type == ERROR:
+                    diagnostics.append(Diagnostic(lineno, max(1, line.find(expr) + 1), f"invalid assignment expression for '{name}'"))
+                elif value_type != UNKNOWN and symbol.type_name != UNKNOWN and value_type != symbol.type_name:
+                    diagnostics.append(Diagnostic(lineno, max(1, line.find(expr) + 1), f"type mismatch for '{name}': declared {symbol.type_name}, assigned {value_type}"))
             continue
 
-        match = CETAK_RE.match(raw)
+        match = CETAK_RE.match(stripped)
         if match:
             expr = match.group(1)
-            value_type = expression_type(expr, symbols)
-            if value_type == UNKNOWN:
-                errors.append(f"{path}:{lineno}: cannot determine type of cetak expression: {expr}")
+            value_type = expression_type(expr, symbols, functions)
+            if value_type in {UNKNOWN, ERROR}:
+                diagnostics.append(Diagnostic(lineno, max(1, line.find(expr) + 1), f"cannot resolve type of cetak expression: {expr}"))
+            continue
 
-    return errors
+        match = RETURN_RE.match(stripped)
+        if match and active_function:
+            expr = match.group(1) or ""
+            value_type = INT if not expr else expression_type(expr, symbols, functions)
+            expected = functions.get(active_function, FunctionSignature(INT)).return_type
+            if value_type in {UNKNOWN, ERROR}:
+                diagnostics.append(Diagnostic(lineno, max(1, line.find("kembalikan") + 1), f"cannot resolve return expression type in '{active_function}'"))
+            elif expected != UNKNOWN and value_type != expected:
+                diagnostics.append(Diagnostic(lineno, max(1, line.find("kembalikan") + 1), f"return type mismatch in '{active_function}': expected {expected}, got {value_type}"))
+
+        if active_function and brace_depth <= 0:
+            active_function = None
+            local_symbols = None
+            brace_depth = 0
+
+    return [item.render(source) for item in diagnostics]
+
+
+__all__ = [
+    "BUILTINS",
+    "Diagnostic",
+    "ERROR",
+    "FunctionSignature",
+    "INT",
+    "STR",
+    "Symbol",
+    "UNKNOWN",
+    "builtin_signature",
+    "check_source",
+    "expression_type",
+    "is_identifier",
+    "literal_type",
+]
