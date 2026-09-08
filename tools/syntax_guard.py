@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """Lightweight source-structure guard for the WeaR Lang frontend.
 
-The guard runs before semantic analysis and reports malformed lexical/structural
-constructs with stable line/column locations. It deliberately does not parse
-the language; its job is to prevent obviously broken source from reaching the
-legacy backend and producing confusing generated C.
+Runs before semantic analysis and reports malformed lexical/structural
+constructs with stable line/column locations.
 """
 
 from __future__ import annotations
@@ -27,9 +25,7 @@ def check_source(path: str | Path) -> list[str]:
     source = Path(path)
     text = source.read_text(encoding="utf-8")
     diagnostics: list[SyntaxDiagnostic] = []
-
-    parens: list[tuple[str, int, int]] = []
-    braces: list[tuple[str, int, int]] = []
+    delimiters: list[tuple[str, int, int]] = []
     in_string = False
     escaped = False
     in_comment = False
@@ -38,71 +34,65 @@ def check_source(path: str | Path) -> list[str]:
     line = 1
     column = 0
 
-    for char in text:
+    index = 0
+    while index < len(text):
+        char = text[index]
         column += 1
 
-        if char == "\n":
-            if in_comment:
-                in_comment = False
-            line += 1
-            column = 0
-            if in_string:
-                diagnostics.append(
-                    SyntaxDiagnostic(
-                        string_line,
-                        string_column,
-                        "unterminated string literal",
-                    )
-                )
-                in_string = False
-                escaped = False
-            continue
-
         if in_comment:
+            if char == "\n":
+                in_comment = False
+                line += 1
+                column = 0
+            index += 1
             continue
 
         if in_string:
+            if char == "\n":
+                diagnostics.append(SyntaxDiagnostic(string_line, string_column, "unterminated string literal"))
+                in_string = False
+                escaped = False
+                line += 1
+                column = 0
+                index += 1
+                continue
             if escaped:
                 escaped = False
             elif char == "\\":
                 escaped = True
             elif char == '"':
                 in_string = False
+            index += 1
             continue
 
         if char == '"':
             in_string = True
+            escaped = False
             string_line = line
             string_column = column
-            continue
-
-        if char == "/":
-            # Comment detection is intentionally handled by the next character
-            # in a tiny state machine below; a single slash remains ordinary.
-            continue
-
-        if char == "(":
-            parens.append(("(", line, column))
-        elif char == ")":
-            if not parens:
-                diagnostics.append(SyntaxDiagnostic(line, column, "unmatched ')'"))
+        elif char == "/" and index + 1 < len(text) and text[index + 1] == "/":
+            in_comment = True
+            index += 1
+            column += 1
+        elif char in "({":
+            delimiters.append((char, line, column))
+        elif char in ")}":
+            expected = "(" if char == ")" else "{"
+            if not delimiters or delimiters[-1][0] != expected:
+                diagnostics.append(SyntaxDiagnostic(line, column, f"unmatched '{char}'"))
             else:
-                parens.pop()
-        elif char == "{":
-            braces.append(("{", line, column))
-        elif char == "}":
-            if not braces:
-                diagnostics.append(SyntaxDiagnostic(line, column, "unmatched '}'"))
-            else:
-                braces.pop()
+                delimiters.pop()
+
+        if char == "\n":
+            line += 1
+            column = 0
+        index += 1
 
     if in_string:
         diagnostics.append(SyntaxDiagnostic(string_line, string_column, "unterminated string literal"))
 
-    for _, item_line, item_column in reversed(parens):
-        diagnostics.append(SyntaxDiagnostic(item_line, item_column, "unclosed '('") )
-    for _, item_line, item_column in reversed(braces):
-        diagnostics.append(SyntaxDiagnostic(item_line, item_column, "unclosed '{'"))
+    for opener, item_line, item_column in reversed(delimiters):
+        diagnostics.append(SyntaxDiagnostic(item_line, item_column, f"unclosed '{opener}'"))
 
     diagnostics.sort(key=lambda item: (item.line, item.column, item.message))
     return [item.render(source) for item in diagnostics]
