@@ -1,9 +1,9 @@
 /* WeaR Lang Stage-0 compiler entrypoint.
  *
  * The historical transpiler is kept in compiler_legacy.c while this entrypoint
- * performs the native semantic symbol pass first.  The pass uses the canonical
+ * performs the native semantic symbol pass first. The pass uses the canonical
  * native symbol table to assign deterministic internal names to variables, then
- * feeds the rewritten source to the mature Stage-0 backend.  This removes the
+ * feeds the rewritten source to the mature Stage-0 backend. This removes the
  * old variable-name heuristic from the correctness path without changing the
  * backend's established code-generation behavior.
  */
@@ -169,9 +169,9 @@ static int token_is_number(const char *src, size_t len, size_t *pos) {
 static WearType lookup_word_type(const char *src, size_t start, size_t end,
                                  const char *scope) {
     char word[WEAR_ALIAS_MAX];
-    size_t len = end - start;
     WearType type;
     WearType fn_type;
+    size_t len = end - start;
 
     if (len == 0 || len >= sizeof(word)) {
         return WEAR_TYPE_UNKNOWN;
@@ -209,6 +209,8 @@ static int declare_native_variable(const char *src, size_t name_start,
                                    WearType type, int line) {
     char name[WEAR_ALIAS_MAX];
     char *internal_name;
+    char *owned_name;
+    char *owned_scope;
     size_t name_len = name_end - name_start;
 
     if (name_len == 0 || name_len >= sizeof(name) ||
@@ -220,13 +222,14 @@ static int declare_native_variable(const char *src, size_t name_start,
 
     internal_name = make_internal_name(scope, name, type,
                                        native_symbol_count + 1);
-    if (internal_name == NULL) {
+    owned_name = native_strdup_tracked(name);
+    owned_scope = native_strdup_tracked(scope);
+    if (internal_name == NULL || owned_name == NULL || owned_scope == NULL) {
         return 0;
     }
     return wear_symbol_declare(
         native_symbols, &native_symbol_count, WEAR_NATIVE_MAX_SYMBOLS,
-        native_strdup_tracked(name), type, native_strdup_tracked(scope),
-        line, internal_name);
+        owned_name, type, owned_scope, line, internal_name);
 }
 
 static const char *native_alias_for(const char *src, size_t start, size_t end,
@@ -277,8 +280,6 @@ static WearType infer_initializer_type(const char *src, size_t len,
         if (type != WEAR_TYPE_UNKNOWN) {
             return type;
         }
-        /* An expression beginning with an identifier defaults to int in the
-         * legacy backend. Native lookup is authoritative whenever available. */
         return WEAR_TYPE_INT;
     }
     return WEAR_TYPE_INT;
@@ -286,13 +287,9 @@ static WearType infer_initializer_type(const char *src, size_t len,
 
 static int parse_function_signature(const char *src, size_t len, size_t *pos,
                                    char *function_name, size_t name_cap,
-                                   const char *outer_scope) {
+                                   int line) {
     size_t start, end;
     size_t param_pos;
-    size_t param_index = 0;
-    char parameter_names[64][WEAR_ALIAS_MAX];
-    WearType parameter_types[64];
-    (void)outer_scope;
 
     skip_space_and_comments(src, len, pos);
     if (!read_identifier(src, len, pos, &start, &end)) {
@@ -313,7 +310,6 @@ static int parse_function_signature(const char *src, size_t len, size_t *pos,
     for (;;) {
         size_t pstart, pend;
         WearType param_type = WEAR_TYPE_STR;
-        char param_name[WEAR_ALIAS_MAX];
 
         skip_space_and_comments(src, len, &param_pos);
         if (param_pos >= len) {
@@ -321,19 +317,14 @@ static int parse_function_signature(const char *src, size_t len, size_t *pos,
             break;
         }
         if (src[param_pos] == ')') {
-            param_pos++;
+            ++param_pos;
             *pos = param_pos;
             break;
         }
         if (!read_identifier(src, len, &param_pos, &pstart, &pend)) {
-            param_pos++;
+            ++param_pos;
             continue;
         }
-        if (pend - pstart >= sizeof(param_name)) {
-            continue;
-        }
-        memcpy(param_name, src + pstart, pend - pstart);
-        param_name[pend - pstart] = '\0';
 
         skip_space_and_comments(src, len, &param_pos);
         if (param_pos < len && src[param_pos] == ':') {
@@ -344,11 +335,10 @@ static int parse_function_signature(const char *src, size_t len, size_t *pos,
                 param_type = WEAR_TYPE_INT;
             }
         }
-        if (param_index < 64) {
-            strcpy(parameter_names[param_index], param_name);
-            parameter_types[param_index] = param_type;
-            ++param_index;
-        }
+
+        (void)declare_native_variable(src, pstart, pend,
+                                      function_name, param_type, line);
+
         skip_space_and_comments(src, len, &param_pos);
         if (param_pos < len && src[param_pos] == ',') {
             ++param_pos;
@@ -372,6 +362,10 @@ static int collect_native_symbols(const char *src, size_t len) {
         }
         if (src[pos] == '\n') {
             ++line;
+            ++pos;
+            continue;
+        }
+        if (src[pos] == '\r') {
             ++pos;
             continue;
         }
@@ -403,12 +397,11 @@ static int collect_native_symbols(const char *src, size_t len) {
         }
 
         if (ident_equals(src, start, end, "fungsi")) {
-            size_t function_pos = pos;
             char function_name[WEAR_ALIAS_MAX] = "";
             size_t signature_pos = pos;
             (void)parse_function_signature(src, len, &signature_pos,
                                             function_name, sizeof(function_name),
-                                            scope);
+                                            line);
             if (function_name[0] != '\0') {
                 WearType return_type =
                     (wear_function_lookup_return_type(
@@ -421,20 +414,21 @@ static int collect_native_symbols(const char *src, size_t len) {
                 strcpy(scope, function_name);
                 in_function = 1;
                 brace_depth = 0;
+                pos = signature_pos;
+            } else {
+                pos = end;
             }
-            pos = function_pos;
             continue;
         }
 
         if (ident_equals(src, start, end, "var")) {
             size_t name_start, name_end;
-            size_t initializer_pos;
-            WearType type;
             size_t p = pos;
+            WearType type;
             if (read_identifier(src, len, &p, &name_start, &name_end)) {
                 skip_space_and_comments(src, len, &p);
                 if (p < len && src[p] == '=') {
-                    initializer_pos = p + 1;
+                    size_t initializer_pos = p + 1;
                     type = infer_initializer_type(src, len, &initializer_pos, scope);
                 } else {
                     type = WEAR_TYPE_INT;
@@ -446,14 +440,8 @@ static int collect_native_symbols(const char *src, size_t len) {
             }
         }
 
-        while (pos < len && src[pos] != '\n' && src[pos] != '\r') {
-            if (src[pos] == '"') {
-                skip_string_literal(src, len, &pos);
-            } else if (src[pos] == '}' || src[pos] == '{') {
-                break;
-            } else {
-                ++pos;
-            }
+        if (src[end] == '\n' || src[end] == '\r') {
+            ++line;
         }
     }
     return 1;
@@ -506,7 +494,8 @@ static int rewrite_source(const char *src, size_t len, char **out_source,
         }
         if (src[pos] == '{') {
             if (in_function) ++brace_depth;
-            ENSURE_CAP(1); out[used++] = src[pos++];
+            ENSURE_CAP(1);
+            out[used++] = src[pos++];
             continue;
         }
         if (src[pos] == '}') {
@@ -517,11 +506,13 @@ static int rewrite_source(const char *src, size_t len, char **out_source,
                     strcpy(scope, "global");
                 }
             }
-            ENSURE_CAP(1); out[used++] = src[pos++];
+            ENSURE_CAP(1);
+            out[used++] = src[pos++];
             continue;
         }
         if (!is_ident_start((unsigned char)src[pos])) {
-            ENSURE_CAP(1); out[used++] = src[pos++];
+            ENSURE_CAP(1);
+            out[used++] = src[pos++];
             continue;
         }
         end = pos + 1;
@@ -535,24 +526,13 @@ static int rewrite_source(const char *src, size_t len, char **out_source,
             used += end - pos;
             skip_space_and_comments(src, len, &p);
             if (read_identifier(src, len, &p, &fn_start, &fn_end)) {
-                ENSURE_CAP(fn_end - fn_start);
-                memcpy(out + used, src + fn_start, fn_end - fn_start);
-                used += fn_end - fn_start;
-                if (fn_end > fn_start && fn_end - fn_start < sizeof(scope)) {
+                if (fn_end - fn_start < sizeof(scope)) {
                     memcpy(scope, src + fn_start, fn_end - fn_start);
                     scope[fn_end - fn_start] = '\0';
                     in_function = 1;
                     brace_depth = 0;
                 }
             }
-            pos = end;
-            continue;
-        }
-
-        if (ident_equals(src, pos, end, "//")) {
-            ENSURE_CAP(end - pos);
-            memcpy(out + used, src + pos, end - pos);
-            used += end - pos;
             pos = end;
             continue;
         }
