@@ -15,7 +15,7 @@
 
 **Current phase:** Core compiler stabilization and self-hosting hardening
 
-**Current engineering focus:** Establish a dependable native regression baseline, harden the runtime, and synchronize Stage-0 with the current self-hosted compiler.
+**Current engineering focus:** Verify the Stage-0 root-cause repairs, then close the remaining bootstrap blockers with reproducible Stage-1/Stage-2 generation.
 
 ---
 
@@ -43,6 +43,12 @@
 - [x] Fix the isolated regression harness so Stage-0 receives its required `runtime.c` dependency.
 - [x] Document the development/stable branch model.
 
+### Compiler core
+- [x] Extend Stage-0 string-return detection for `input()` and `process_imports()`.
+- [x] Make Stage-0 user-function return type generation consult `returns_string()` instead of hard-coding `int`.
+- [x] Upgrade the legacy embedded Stage-0 string concatenation helper to accept both two- and three-operand generated calls.
+- [x] Align the standalone runtime concatenation dispatcher with the legacy three-operand compatibility path.
+
 ### Runtime
 - [x] Harden string allocation and concatenation against null inputs and size overflow.
 - [x] Harden file reads/writes with seek, size, and I/O error checks.
@@ -67,9 +73,8 @@
 ## In Progress
 
 ### Compiler core
-- [ ] Audit `compiler.c` and `compiler.wr` for semantic drift.
-- [ ] Fix Stage-0 return-type generation for string-returning user functions such as `process_imports`.
-- [ ] Fix chained string-concatenation code generation so expressions such as `a + ";" + nl` produce nested two-operand runtime calls.
+- [ ] Audit remaining compiler.c/compiler.wr semantic drift.
+- [ ] Verify the Stage-0 return-type and concatenation repairs through real bootstrap execution.
 - [ ] Make Stage-0 and self-hosted Stage-1 behavior deterministic and reproducible.
 - [ ] Improve expression parsing and operator handling.
 - [ ] Replace heuristic string-type detection with explicit compiler type information.
@@ -78,7 +83,7 @@
 
 ### Self-hosting
 - [ ] Prove bootstrap reproducibility across consecutive generations.
-- [ ] Use the real bootstrap workflow to capture the first reproducible Stage-0 → Stage-1 → Stage-2 result.
+- [ ] Capture the first reproducible Stage-0 → Stage-1 → Stage-2 result.
 - [ ] Add automated comparison of generated compiler output between bootstrap stages.
 - [ ] Reduce reliance on generated/manual synchronization between `compiler.c` and `compiler.wr`.
 - [ ] Re-enable self-hosting as a required CI gate after Stage-0/Stage-1 synchronization is complete.
@@ -164,12 +169,13 @@
 - [ ] Deterministic type handling
 - [ ] Diagnostics with line/column
 - [ ] Regression suite verified in CI
-- [x] Bootstrap capability drift is now observable and tracked
+- [x] Bootstrap capability drift is observable and tracked
 - [x] Stage-0/Stage-1 audit is bidirectional
 - [x] Deferred regression surface is documented
 - [x] Real multi-stage bootstrap execution is wired into CI
 - [x] Bootstrap failure diagnostics expose the first Stage-1 compilation blockers
 - [x] Regression workspace dependency handling fixed
+- [x] Stage-0 return-type and concatenation root-cause repairs applied
 
 ### M2 — Self-Hosting Hardening
 - [ ] Reproducible bootstrap
@@ -221,3 +227,4 @@
 - Added complete Stage-1 compiler diagnostics to the bootstrap runner.
 - Confirmed the first concrete Stage-1 blockers: incorrect return type generation for `process_imports` and invalid three-operand `__wear_concat(...)` generation for chained concatenation.
 - Fixed the regression harness so isolated test workspaces include the runtime dependency required by Stage-0.
+- Applied Stage-0 root-cause repairs for string-returning functions and legacy three-operand concatenation compatibility.
