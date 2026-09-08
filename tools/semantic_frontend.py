@@ -2,10 +2,9 @@
 """Semantic compatibility frontend for the legacy Stage-0 compiler.
 
 The historical compiler decides several C types from identifier spelling.
-This frontend removes that dependency for user variables by deterministically
-renaming typed variables to backend-safe internal identifiers before the legacy
-backend sees the program. Strings/comments are preserved and keywords/function
-names are never renamed.
+This frontend removes that dependency for typed user variables by
+renaming them to backend-safe internal identifiers before the legacy backend
+sees the program. The rewrite is scope-aware and preserves strings/comments.
 """
 
 from __future__ import annotations
@@ -88,16 +87,21 @@ def _infer_type(expr: str, symbols: dict[str, Symbol]) -> str:
 
 
 def _internal_name(tag: str, scope: str, name: str, unique: int) -> str:
+    safe_scope = re.sub(r"[^A-Za-z0-9_]", "_", scope)
+    safe_name = re.sub(r"[^A-Za-z0-9_]", "_", name)
     # The legacy compiler recognizes str*/string-ish spellings, while int*
-    # names are intentionally outside those patterns.
-    return f"str_{scope}_{name}_{unique}" if tag == STR else f"int_{scope}_{name}_{unique}"
+    # names intentionally sit outside those string-prefix patterns.
+    if tag == STR:
+        return f"str_{safe_scope}_{safe_name}_{unique}"
+    return f"int_{safe_scope}_{safe_name}_{unique}"
 
 
 def rewrite_source(text: str) -> str:
-    symbols: dict[str, Symbol] = {}
-    mapping: dict[str, str] = {}
     lines = text.splitlines(keepends=True)
+    symbols_by_scope: dict[str, dict[str, Symbol]] = {"global": {}}
+    mappings_by_scope: dict[str, dict[str, str]] = {"global": {}}
     function_scope = "global"
+    brace_depth = 0
     unique = 0
 
     for lineno, raw in enumerate(lines, 1):
@@ -108,6 +112,8 @@ def rewrite_source(text: str) -> str:
         fn = FUNCTION.match(raw)
         if fn:
             function_scope = fn.group(1)
+            symbols_by_scope.setdefault(function_scope, {})
+            mappings_by_scope.setdefault(function_scope, {})
             params = fn.group(2).strip()
             if params:
                 for param in params.split(','):
@@ -124,34 +130,75 @@ def rewrite_source(text: str) -> str:
                         continue
                     unique += 1
                     internal = _internal_name(typ, function_scope, name, unique)
-                    symbols[name] = Symbol(name, typ, internal, function_scope, lineno)
-                    mapping[name] = internal
+                    symbols_by_scope[function_scope][name] = Symbol(name, typ, internal, function_scope, lineno)
+                    mappings_by_scope[function_scope][name] = internal
+            brace_depth = max(0, raw.count("{") - raw.count("}"))
             continue
+
+        scope_symbols = symbols_by_scope.setdefault(function_scope, {})
+        scope_mapping = mappings_by_scope.setdefault(function_scope, {})
 
         decl = VAR_DECL.match(raw)
         if decl:
             name, expr = decl.groups()
-            typ = _infer_type(expr, symbols)
+            visible = dict(symbols_by_scope.get("global", {}))
+            visible.update(scope_symbols)
+            typ = _infer_type(expr, visible)
             if typ in (STR, INT):
                 unique += 1
                 internal = _internal_name(typ, function_scope, name, unique)
-                symbols[name] = Symbol(name, typ, internal, function_scope, lineno)
-                mapping[name] = internal
+                scope_symbols[name] = Symbol(name, typ, internal, function_scope, lineno)
+                scope_mapping[name] = internal
             continue
 
         assignment = ASSIGN.match(raw)
         if assignment and not stripped.startswith(("jika", "tapi_jika", "selama", "fungsi")):
             name, expr = assignment.groups()
-            symbol = symbols.get(name)
+            visible = dict(symbols_by_scope.get("global", {}))
+            visible.update(scope_symbols)
+            symbol = scope_symbols.get(name) or symbols_by_scope.get("global", {}).get(name)
             if symbol:
-                typ = _infer_type(expr, symbols)
+                typ = _infer_type(expr, visible)
                 if typ != UNKNOWN:
-                    symbols[name] = Symbol(name, typ, symbol.internal_name, symbol.scope, symbol.line)
+                    target_scope = symbol.scope
+                    old_symbols = symbols_by_scope[target_scope]
+                    old_symbols[name] = Symbol(name, typ, symbol.internal_name, target_scope, symbol.line)
             continue
 
-    if not mapping:
-        return text
-    return ''.join(_rename_identifiers(line, mapping) for line in lines)
+        if function_scope != "global":
+            brace_depth += raw.count("{") - raw.count("}")
+            if brace_depth <= 0:
+                function_scope = "global"
+                brace_depth = 0
+
+    # Apply the mapping in a second pass so declaration order and shadowing are
+    # resolved before any source token is rewritten.
+    output: list[str] = []
+    function_scope = "global"
+    brace_depth = 0
+    global_mapping = mappings_by_scope.get("global", {})
+
+    for raw in lines:
+        fn = FUNCTION.match(raw)
+        if fn:
+            function_scope = fn.group(1)
+            brace_depth = max(0, raw.count("{") - raw.count("}"))
+            mapping = dict(global_mapping)
+            mapping.update(mappings_by_scope.get(function_scope, {}))
+            output.append(_rename_identifiers(raw, mapping))
+            continue
+
+        mapping = dict(global_mapping)
+        mapping.update(mappings_by_scope.get(function_scope, {}))
+        output.append(_rename_identifiers(raw, mapping))
+
+        if function_scope != "global":
+            brace_depth += raw.count("{") - raw.count("}")
+            if brace_depth <= 0:
+                function_scope = "global"
+                brace_depth = 0
+
+    return ''.join(output)
 
 
 def rewrite_file(source: Path, destination: Path) -> None:
