@@ -51,6 +51,8 @@
 - [x] Add the deterministic scoped symbol-table seam used as the migration boundary for native type tracking.
 - [x] Extend the symbol-table seam with an explicit function namespace alongside variable scopes.
 - [x] Route semantic compatibility lowering through the shared symbol-table implementation.
+- [x] Add a native C type contract with explicit `unknown`, `int`, `str`, and `error` identities.
+- [x] Add a native C symbol/function lookup contract that mirrors the frontend scope and namespace model.
 
 ### Compiler core
 - [x] Extend Stage-0 string-return detection for `input()` and `process_imports()`.
@@ -96,6 +98,7 @@
 ### Compiler core
 - [ ] Audit remaining compiler.c/compiler.wr semantic drift.
 - [ ] Replace heuristic string-type detection inside the self-hosted compiler with explicit compiler symbol/type tracking.
+- [ ] Connect the native C symbol-table contract to Stage-0 declaration/assignment/`cetak` dispatch.
 - [ ] Fix remaining `cetak` type dispatch edge cases.
 - [ ] Improve expression parsing and operator handling.
 - [ ] Improve diagnostics with source line/column information.
@@ -157,102 +160,10 @@
 - [ ] Release checklist and versioning policy.
 - [ ] Changelog for each stable release.
 
----
-
-## Rules for Future Development
-
-1. **Never modify `main` for experimental work.** Use `development` first.
-2. **Implementation first:** complete meaningful compiler/runtime/tooling work before spending cycles on broad testing.
-3. **Do not claim a feature is complete until the implementation itself is finished.**
-4. **Keep `compiler.c` and `compiler.wr` behavior synchronized.**
-5. **Prefer deterministic compiler logic over naming heuristics.**
-6. **Do not commit secrets, local machine state, generated build artifacts, or temporary files.**
-7. **After the implementation pass, run the focused and full validation suites.**
-8. **Self-hosting must remain reproducible.**
-9. **PR/test workflows should default to read-only permissions.**
-
-## Branch Policy
-
-- `main` is stable-only.
-- `development` is the integration branch for completed engineering work.
-- Short-lived feature branches may be created from `development` and must target `development` for review.
-- Never create experimental branches from `main`.
-
----
-
-## Milestones
-
-### M0 — Repository Stabilization
-- [x] Development branch workflow
-- [x] Basic CI/regression coverage
-- [x] Security/repository hygiene baseline
-- [ ] Clean documentation baseline
-
-### M1 — Compiler Core Stabilization
-- [ ] Compiler/parser audit
-- [ ] Deterministic type handling inside the self-hosted compiler
-- [ ] Diagnostics with line/column
-- [ ] Regression suite verified in CI
-- [x] Bootstrap capability drift is observable and tracked
-- [x] Stage-0/Stage-1 audit is bidirectional
-- [x] Deferred regression surface is documented
-- [x] Real multi-stage bootstrap execution is wired into CI
-- [x] Bootstrap failure diagnostics expose the first Stage-1 compilation blockers
-- [x] Regression workspace dependency handling fixed
-- [x] Stage-0 return-type and concatenation root-cause repairs applied
-- [x] Stage-0 prototype generation stabilized
-- [x] A real Stage-0 → Stage-1 → Stage-2 reproducibility check passed
-- [x] Deterministic semantic static-check surface added
-- [x] First production-oriented CLI surface added
-- [x] Semantic compatibility lowering integrated into the CLI backend path
-- [x] Multilingual frontend normalization integrated into the CLI path
-- [x] Compatibility lowering preserves the separate function namespace
-- [x] Scoped symbol-table migration seam added
-- [x] Function namespace modeled explicitly in the migration seam
-- [x] Compatibility lowering consumes the shared symbol-table implementation
-
-### M2 — Self-Hosting Hardening
-- [x] First reproducible bootstrap generation pair
-- [ ] Multi-generation verification
-- [ ] Stage synchronization policy
-- [ ] Self-hosting release gate
-
-### M3 — Developer Tooling
-- [x] First CLI foundation
-- [ ] Better errors
-- [ ] Improved VS Code/web tooling
-
-### M4 — Language Expansion
-- [ ] Types
-- [ ] Standard library
-- [ ] Robust modules/imports
-- [ ] Expanded collections
-
-### M5 — v1.1 Release Candidate
-- [ ] CI green
-- [ ] Bootstrap verified
-- [ ] Regression suite green
-- [ ] Documentation complete
-- [ ] Release artifacts reproducible
-
----
-
 ## Change Log
 
 ### 2026-09-08
-- Switched the engineering workflow to implementation-first mode per project direction; broad testing is deferred until the current implementation pass is substantially complete.
-- Added `tools/wear.py` as the first production-oriented CLI surface with isolated build directories, explicit input/output paths, `run`, `compile`, `--help`, `--version`, and structured exit codes.
-- Added `tools/semantic_contract.py` as the canonical frontend primitive type/signature layer.
-- Added `tools/semantic_frontend.py` to lower typed variables to deterministic backend-safe identifiers before the legacy Stage-0 compiler.
-- Integrated semantic lowering into `tools/wear.py`, so the supported CLI path no longer depends on user variable naming for string/int selection.
-- Added localized frontend normalization for Indonesian and English keyword spellings while preserving strings/comments.
-- Fixed semantic scope handling so functions resolve global symbols before local shadowing.
-- Fixed function return inference so no-return functions remain `unknown` and incompatible mixed returns become `error` instead of silently defaulting to `int`.
-- Added semantic regression fixtures for global visibility and mixed return types.
-- Hardened semantic lowering so variable renames never hijack a same-named function definition or call.
-- Added the scoped symbol-table seam and explicit function namespace to prepare native compiler migration.
-- Routed semantic compatibility lowering through the shared symbol-table implementation rather than maintaining a parallel symbol representation.
-- Kept the native self-hosted compiler migration explicitly in progress; the Python semantic layer remains a compatibility bridge until `compiler.c` / `compiler.wr` receive native symbol-table tracking.
-
-### 2026-09-06
-- Added `PROGRESS.md` as the persistent development roadmap and engineering memory for WeaR Lang.
+- Added native C semantic type identities in `tools/native_types.h`.
+- Added native C symbol/function lookup APIs in `tools/native_symbol_table.h` and `tools/native_symbol_table.c`.
+- Defined the native migration contract without changing `main` or claiming the legacy heuristic has already been removed.
+- Kept implementation-first development policy active; broad validation remains deferred until the native migration pass is substantially complete.
