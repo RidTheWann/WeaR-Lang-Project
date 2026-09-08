@@ -590,6 +590,9 @@ int is_string_varname(char* name) {
     if (__wear_streq(name, "next")) {
         return 1;
     }
+    if (__wear_streq(name, "message")) {
+        return 1;
+    }
     if (__wear_streq(name, "num")) {
         return 1;
     }
