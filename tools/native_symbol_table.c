@@ -59,6 +59,21 @@ int wear_symbol_declare(WearSymbol* symbols, size_t* count, size_t capacity,
     if (!symbols || !count || !name || !scope || *count >= capacity) {
         return 0;
     }
+
+    /*
+     * The native bootstrap models global/function scope (not nested block
+     * scope). Keep the table canonical by rejecting a second declaration of
+     * the same source name in the same scope instead of allowing the most
+     * recent entry to silently change the resolved type.
+     */
+    for (size_t i = 0; i < *count; ++i) {
+        if (symbols[i].name && symbols[i].scope &&
+            strcmp(symbols[i].name, name) == 0 &&
+            strcmp(symbols[i].scope, scope) == 0) {
+            return 0;
+        }
+    }
+
     symbols[*count] = (WearSymbol){
         .name = name,
         .type = type,
@@ -95,6 +110,14 @@ int wear_function_declare(WearFunctionSymbol* functions, size_t* count,
     if (!functions || !count || !name || *count >= capacity) {
         return 0;
     }
+
+    /* Function names have their own namespace and are globally unique. */
+    for (size_t i = 0; i < *count; ++i) {
+        if (functions[i].name && strcmp(functions[i].name, name) == 0) {
+            return 0;
+        }
+    }
+
     functions[*count] = (WearFunctionSymbol){
         .name = name,
         .return_type = return_type,
