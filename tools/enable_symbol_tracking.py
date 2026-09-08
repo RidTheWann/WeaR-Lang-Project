@@ -4,6 +4,9 @@
 This deliberately keeps the existing parser architecture intact. It adds a
 small compiler-owned symbol set for variables initialized from string literals
 and makes `cetak` consult that set before the legacy naming heuristic.
+
+The migration is a one-time source transformation; normal CI never writes to
+the repository from validation jobs.
 """
 
 from __future__ import annotations
@@ -61,27 +64,14 @@ int is_tracked_string_var(char* name, char* string_vars) {
     return 0;
 }
 '''
-    source = insert_after_once(
-        source,
-        "int is_string_varname(char* name) {",
-        helper,
-        "stage0 helper",
-    )
-
-    source = insert_after_once(
-        source,
-        '    char* var_name = "";\n',
-        '    char* string_vars = ",";\n',
-        "stage0 symbol state",
-    )
-
+    source = insert_after_once(source, "int is_string_varname(char* name) {", helper, "stage0 helper")
+    source = insert_after_once(source, '    char* var_name = "";\n', '    char* string_vars = ",";\n', "stage0 symbol state")
     source = replace_once(
         source,
         '                    in_var_decl = 0;\n                }\n                else {',
         '                    in_var_decl = 0;\n                    string_vars = __wear_concat(string_vars, var_name);\n                    string_vars = __wear_concat(string_vars, ",");\n                }\n                else {',
         "stage0 literal tracking",
     )
-
     source = replace_once(
         source,
         '                        if (returns_string(peek_word)) {',
@@ -126,27 +116,14 @@ fungsi is_tracked_string_var(name, string_vars) {
     kembalikan 0
 }
 '''
-    source = insert_after_once(
-        source,
-        "fungsi is_string_varname(name: str) {",
-        helper,
-        "stage1 helper",
-    )
-
-    source = insert_after_once(
-        source,
-        'var var_name = ""\n',
-        'var string_vars = ","\n',
-        "stage1 symbol state",
-    )
-
+    source = insert_after_once(source, "fungsi is_string_varname(name: str) {", helper, "stage1 helper")
+    source = insert_after_once(source, 'var var_name = ""\n', 'var string_vars = ","\n', "stage1 symbol state")
     source = replace_once(
         source,
         '                in_var_decl = 0\n            } lainnya {',
         '                in_var_decl = 0\n                string_vars = string_vars + var_name\n                string_vars = string_vars + ","\n            } lainnya {',
         "stage1 literal tracking",
     )
-
     source = replace_once(
         source,
         '                        jika (returns_string(peek_word)) {',
