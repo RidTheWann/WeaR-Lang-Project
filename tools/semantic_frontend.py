@@ -10,11 +10,11 @@ namespace, and preserves strings/comments.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 import re
 
 from semantic_contract import INT, STR, UNKNOWN, expression_type
+from symbol_table import SymbolTable
 
 IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 VAR_DECL = re.compile(r"^\s*var\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$")
@@ -25,15 +25,6 @@ KEYWORDS = {
     "var", "cetak", "selama", "jika", "lainnya", "tapi_jika", "fungsi",
     "kembalikan", "benar", "salah", "impor",
 }
-
-
-@dataclass(frozen=True)
-class Symbol:
-    name: str
-    type_name: str
-    internal_name: str
-    scope: str
-    line: int
 
 
 def _split_code_and_tail(line: str) -> tuple[str, str]:
@@ -100,7 +91,7 @@ def _rename_identifiers(
     return ''.join(out) + comment
 
 
-def _infer_type(expr: str, symbols: dict[str, Symbol]) -> str:
+def _infer_type(expr: str, symbols: dict) -> str:
     return expression_type(expr, symbols)
 
 
@@ -116,19 +107,21 @@ def _internal_name(tag: str, scope: str, name: str, unique: int) -> str:
 
 def rewrite_source(text: str) -> str:
     lines = text.splitlines(keepends=True)
-    symbols_by_scope: dict[str, dict[str, Symbol]] = {"global": {}}
-    mappings_by_scope: dict[str, dict[str, str]] = {"global": {}}
+    table = SymbolTable()
     function_scope = "global"
     brace_depth = 0
     unique = 0
     function_names: set[str] = set()
+    mappings_by_scope: dict[str, dict[str, str]] = {"global": {}}
 
     # Collect the function namespace first so a variable cannot accidentally
     # rewrite a function call during the lowering pass.
     for raw in lines:
         fn = FUNCTION.match(raw)
         if fn:
-            function_names.add(fn.group(1))
+            name = fn.group(1)
+            function_names.add(name)
+            table.declare_function(name, __import__("semantic_contract").FunctionSignature(UNKNOWN), line=0)
 
     for lineno, raw in enumerate(lines, 1):
         stripped = raw.strip()
@@ -138,7 +131,7 @@ def rewrite_source(text: str) -> str:
         fn = FUNCTION.match(raw)
         if fn:
             function_scope = fn.group(1)
-            symbols_by_scope.setdefault(function_scope, {})
+            table.ensure_scope(function_scope)
             mappings_by_scope.setdefault(function_scope, {})
             params = fn.group(2).strip()
             if params:
@@ -156,39 +149,33 @@ def rewrite_source(text: str) -> str:
                         continue
                     unique += 1
                     internal = _internal_name(typ, function_scope, name, unique)
-                    symbols_by_scope[function_scope][name] = Symbol(name, typ, internal, function_scope, lineno)
+                    table.declare(name, typ, line=lineno, scope=function_scope, internal_name=internal)
                     mappings_by_scope[function_scope][name] = internal
             brace_depth = max(0, raw.count("{") - raw.count("}"))
             continue
 
-        scope_symbols = symbols_by_scope.setdefault(function_scope, {})
         scope_mapping = mappings_by_scope.setdefault(function_scope, {})
 
         decl = VAR_DECL.match(raw)
         if decl:
             name, expr = decl.groups()
-            visible = dict(symbols_by_scope.get("global", {}))
-            visible.update(scope_symbols)
+            visible = table.visible(function_scope)
             typ = _infer_type(expr, visible)
             if typ in (STR, INT):
                 unique += 1
                 internal = _internal_name(typ, function_scope, name, unique)
-                scope_symbols[name] = Symbol(name, typ, internal, function_scope, lineno)
+                table.declare(name, typ, line=lineno, scope=function_scope, internal_name=internal)
                 scope_mapping[name] = internal
             continue
 
         assignment = ASSIGN.match(raw)
         if assignment and not stripped.startswith(("jika", "tapi_jika", "selama", "fungsi")):
             name, expr = assignment.groups()
-            visible = dict(symbols_by_scope.get("global", {}))
-            visible.update(scope_symbols)
-            symbol = scope_symbols.get(name) or symbols_by_scope.get("global", {}).get(name)
+            symbol = table.resolve(name, scope=function_scope)
             if symbol:
-                typ = _infer_type(expr, visible)
+                typ = _infer_type(expr, table.visible(function_scope))
                 if typ != UNKNOWN:
-                    target_scope = symbol.scope
-                    old_symbols = symbols_by_scope[target_scope]
-                    old_symbols[name] = Symbol(name, typ, symbol.internal_name, target_scope, symbol.line)
+                    table.update_type(name, typ, scope=function_scope)
             continue
 
         if function_scope != "global":
