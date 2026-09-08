@@ -12,44 +12,12 @@ on:
       - development
   workflow_dispatch:
 
-# PR/test jobs do not need repository write access.
 permissions:
   contents: read
 
 jobs:
-  stage0-repair:
-    name: Apply Stage-0 M1 source repairs
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/m1-regression-hardening'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout feature branch
-        uses: actions/checkout@v4
-        with:
-          ref: feature/m1-regression-hardening
-
-      - name: Apply deterministic repair codemod
-        run: python3 tools/repair_stage0.py
-
-      - name: Commit source repairs
-        run: |
-          if git diff --quiet; then
-            echo "No Stage-0 repairs required."
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add compiler.c compiler.wr runtime.c
-          git commit -m "fix(compiler): repair Stage-0 bootstrap compatibility"
-          git push origin HEAD:feature/m1-regression-hardening
-
   native-regression:
     name: Native compiler regression suite
-    needs: stage0-repair
-    if: always()
     runs-on: ubuntu-latest
 
     steps:
