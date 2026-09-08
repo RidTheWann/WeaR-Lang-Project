@@ -16,27 +16,62 @@ The repository currently contains:
 - `compiler.c` — Stage-0/native bootstrap compiler.
 - `compiler.wr` — self-hosted Stage-1 compiler source.
 - `runtime.c` — C runtime helpers used by generated programs.
+- `tools/wear.py` — portable command-line frontend for compile/run workflows.
 - `examples/` — language examples and regression inputs.
 - `tests/` — native regression cases and CI runner.
 - `docs/` — browser playground and static web assets.
 - `archive/stage0_bootstrap/` — historical bootstrap artifacts.
 
-## Building the compiler
+## Building and using WeaR
+
+### Recommended CLI
+
+The project now provides a Python-based command-line frontend that keeps intermediate build files isolated from the source tree.
+
+Compile a WeaR program to generated C:
+
+```bash
+python3 tools/wear.py compile examples/demo.wr -o build/demo.c
+```
+
+Run a WeaR program directly through the native toolchain:
+
+```bash
+python3 tools/wear.py run examples/demo.wr
+```
+
+Show the compiler frontend version:
+
+```bash
+python3 tools/wear.py --version
+```
+
+Use a different C compiler when necessary:
+
+```bash
+python3 tools/wear.py --cc clang compile examples/demo.wr -o build/demo.c
+```
+
+The CLI uses temporary build directories, stages the required `compiler.c` and `runtime.c` files there, and only writes the requested generated-C destination to the project workspace. Exit codes distinguish usage, toolchain, compiler, and native-program failures.
 
 ### Windows
 
 Requirements:
 
 - GCC/MinGW available in `PATH`.
-- The repository's bootstrap compiler (`wear.exe`) or a Stage-0 bootstrap compiler.
+- Python 3.10+.
 
-Run:
+Run the CLI from the repository root:
+
+```bat
+python tools\wear.py compile examples\demo.wr -o build\demo.c
+```
+
+The legacy bootstrap script remains available:
 
 ```bat
 build_v1.bat
 ```
-
-The bootstrap script builds a self-hosted compiler and performs the project's current bootstrap validation.
 
 ### Native regression suite
 
@@ -48,9 +83,9 @@ bash tests/run_regression.sh
 
 The complete Stage-0 → Stage-1 bootstrap is intentionally not a required CI gate yet because `compiler.c` and the current `compiler.wr` still have known semantic drift. See GitHub issue #1 for the synchronization work.
 
-## Using WeaR
+## Legacy compiler workflow
 
-The current native compiler expects the input source at `input.wr` and generates `output.c`.
+The native compiler itself expects `input.wr` in its working directory and generates `output.c`.
 
 ```bat
 copy examples\demo.wr input.wr
