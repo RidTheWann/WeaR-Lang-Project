@@ -36,8 +36,8 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add compiler.c runtime.c
-          git commit -m "fix(compiler): repair Stage-0 bootstrap compatibility"
+          git add compiler.c compiler.wr runtime.c
+          git commit -m "fix(bootstrap): synchronize Stage-0 and Stage-1 sources"
           git push origin HEAD:${{ github.ref_name }}
 
   bootstrap-experiment:
