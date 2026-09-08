@@ -44,6 +44,7 @@
 - [x] Restrict PR/test workflow permissions to read-only repository access; write access is limited to the feature-push self-repair job.
 - [x] Document the development/stable branch model.
 - [x] Add an explicit opt-in `WEAR_RUN_DEFERRED=1` mode for exercising semantic regression fixtures without weakening the baseline suite.
+- [x] Add deterministic semantic static checks independent of compiler naming heuristics.
 
 ### Compiler core
 - [x] Extend Stage-0 string-return detection for `input()` and `process_imports()`.
@@ -67,10 +68,12 @@
 - [x] Document the M1 feature-branch validation workflow.
 - [x] Document the current compiler architecture and Stage-0/Stage-1 drift model.
 - [x] Formalize the repository branching policy.
+- [x] Document the deterministic symbol/type-tracking contract.
 
 ### Regression surface
 - [x] Add deferred coverage fixtures for string concatenation, typed parameters, `tapi_jika`, `input()`, and imports.
 - [x] Document the distinction between active baseline tests and deferred compiler-surface tests.
+- [x] Add an arbitrary-name fixture for deterministic string symbol/type tracking.
 
 ---
 
@@ -92,6 +95,7 @@
 - [ ] Re-enable self-hosting as a required CI gate after the native regression surface is stable.
 
 ### Testing
+- [x] Add static semantic checking for declared variable types and `cetak` expressions.
 - [ ] Verify the complete native regression suite in GitHub Actions.
 - [ ] Promote `string_symbol_tracking` into active CI after deterministic type handling is complete.
 - [ ] Promote string concatenation into active CI after deterministic type handling is complete.
@@ -182,6 +186,7 @@
 - [x] Stage-0 return-type and concatenation root-cause repairs applied
 - [x] Stage-0 prototype generation stabilized
 - [x] A real Stage-0 → Stage-1 → Stage-2 reproducibility check passed
+- [x] Deterministic semantic static-check surface added
 
 ### M2 — Self-Hosting Hardening
 - [x] First reproducible bootstrap generation pair
@@ -241,3 +246,5 @@
 - Tightened GitHub Actions permissions so PR/test workflows use read-only repository access by default.
 - Added the deterministic symbol/type-tracking contract and deferred fixture using arbitrary variable names.
 - Added an opt-in deferred regression runner mode so semantic fixtures can be exercised without changing the baseline CI contract.
+- Added `tools/typecheck_wr.py` as an independent semantic checker for variable declarations and `cetak` expressions.
+- Added a dedicated semantic-static CI job so type-contract regressions are detected independently from compiler name heuristics.
