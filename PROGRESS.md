@@ -32,6 +32,8 @@
 - [x] Add baseline regression cases for literals/variables, control flow, and functions.
 - [x] Add repository hygiene checks for generated build artifacts and required project docs.
 - [x] Add manual workflow dispatch support for CI.
+- [x] Add a structural Stage-0/Stage-1 capability audit under `tools/audit_bootstrap.py`.
+- [x] Make the bootstrap audit visible in CI without turning the known M1 drift into a false-green release gate.
 - [x] Document the development/stable branch model.
 
 ### Runtime
@@ -43,6 +45,7 @@
 ### Documentation
 - [x] Improve README guidance for the native compiler workflow.
 - [x] Create this persistent progress tracker.
+- [x] Document the bootstrap contract and release gate policy.
 - [x] Record the current Stage-0/Stage-1 synchronization blocker as GitHub issue #1.
 
 ---
@@ -136,6 +139,7 @@
 - [ ] Deterministic type handling
 - [ ] Diagnostics with line/column
 - [ ] Regression suite verified in CI
+- [x] Bootstrap capability drift is now observable and tracked
 
 ### M2 — Self-Hosting Hardening
 - [ ] Reproducible bootstrap
@@ -172,3 +176,8 @@
 - Added regression cases for basic variables/literals, control flow, and function return behavior.
 - Hardened `runtime.c` memory, input, and file-I/O handling.
 - Opened GitHub issue #1 to track Stage-0/Stage-1 semantic synchronization and bootstrap reproducibility.
+
+### 2026-09-08
+- Added `tools/audit_bootstrap.py` to make Stage-0/Stage-1 capability drift measurable.
+- Added `docs/bootstrap-contract.md` defining the canonical-source and release-gate bootstrap invariants.
+- Added a visible CI bootstrap-audit job with non-gating behavior until Issue #1 is resolved.
