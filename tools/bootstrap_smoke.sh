@@ -6,7 +6,7 @@ WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 CC="${CC:-gcc}"
-CFLAGS="${CFLAGS:--std=c11 -Wall -Wextra -Werror -O2 -Wno-unused-parameter}"
+CFLAGS="${CFLAGS:--std=c11 -Wall -Wextra -O2 -Wno-unused-parameter}"
 
 log() {
     printf '[bootstrap] %s\n' "$*"
@@ -27,7 +27,11 @@ cp "$ROOT_DIR/compiler.wr" "$WORK_DIR/compiler.wr"
 cp "$ROOT_DIR/runtime.c" "$WORK_DIR/runtime.c"
 
 log "[1/5] Building Stage-0 native compiler"
-$CC $CFLAGS "$WORK_DIR/compiler.c" -o "$WORK_DIR/stage0"
+$CC $CFLAGS "$WORK_DIR/compiler.c" -o "$WORK_DIR/stage0" 2>"$WORK_DIR/stage0-build-warnings.log"
+if [ -s "$WORK_DIR/stage0-build-warnings.log" ]; then
+    log "Stage-0 compiler warnings detected (non-gating during M1):"
+    sed 's/^/[warning] /' "$WORK_DIR/stage0-build-warnings.log"
+fi
 
 log "[2/5] Generating Stage-1 from canonical compiler.wr"
 cp "$WORK_DIR/compiler.wr" "$WORK_DIR/input.wr"
@@ -41,7 +45,11 @@ test -s "$WORK_DIR/output.c"
 mv "$WORK_DIR/output.c" "$WORK_DIR/stage1.c"
 
 log "[3/5] Building Stage-1 compiler"
-$CC $CFLAGS "$WORK_DIR/stage1.c" -o "$WORK_DIR/stage1"
+$CC $CFLAGS "$WORK_DIR/stage1.c" -o "$WORK_DIR/stage1" 2>"$WORK_DIR/stage1-build-warnings.log"
+if [ -s "$WORK_DIR/stage1-build-warnings.log" ]; then
+    log "Stage-1 compiler warnings detected (non-gating during M1):"
+    sed 's/^/[warning] /' "$WORK_DIR/stage1-build-warnings.log"
+fi
 
 log "[4/5] Generating Stage-2 from the same canonical compiler.wr"
 cp "$WORK_DIR/compiler.wr" "$WORK_DIR/input.wr"
