@@ -15,7 +15,7 @@
 
 **Current phase:** M1 compiler stabilization / M2 bootstrap hardening
 
-**Current engineering focus:** Keep Stage-0 → Stage-1 → Stage-2 reproducibility green, eliminate heuristic type decisions, and make the native regression suite pass in PR CI.
+**Current engineering focus:** Finish compiler/runtime/tooling implementation first. Testing and release-gate promotion happen after the planned engineering changes are substantially complete.
 
 ---
 
@@ -41,10 +41,11 @@
 - [x] Add a dedicated bootstrap workflow for feature branches and pull requests into `development`.
 - [x] Add complete diagnostics when a bootstrap compiler stage fails to build.
 - [x] Fix the isolated regression harness so Stage-0 receives its required `runtime.c` dependency.
-- [x] Restrict PR/test workflow permissions to read-only repository access; write access is limited to the feature-push self-repair job.
+- [x] Restrict PR/test workflow permissions to read-only repository access.
 - [x] Document the development/stable branch model.
 - [x] Add an explicit opt-in `WEAR_RUN_DEFERRED=1` mode for exercising semantic regression fixtures without weakening the baseline suite.
 - [x] Add deterministic semantic static checks independent of compiler naming heuristics.
+- [x] Add `tools/wear.py`, a portable command-line frontend with compile/run/version support and explicit input/output paths.
 
 ### Compiler core
 - [x] Extend Stage-0 string-return detection for `input()` and `process_imports()`.
@@ -69,6 +70,7 @@
 - [x] Document the current compiler architecture and Stage-0/Stage-1 drift model.
 - [x] Formalize the repository branching policy.
 - [x] Document the deterministic symbol/type-tracking contract.
+- [x] Document the new CLI workflow in `README.md`.
 
 ### Regression surface
 - [x] Add deferred coverage fixtures for string concatenation, typed parameters, `tapi_jika`, `input()`, and imports.
@@ -96,6 +98,7 @@
 
 ### Testing
 - [x] Add static semantic checking for declared variable types and `cetak` expressions.
+- [ ] Hold broader testing/CI promotion until the implementation pass is complete.
 - [ ] Verify the complete native regression suite in GitHub Actions.
 - [ ] Promote `string_symbol_tracking` into active CI after deterministic type handling is complete.
 - [ ] Promote string concatenation into active CI after deterministic type handling is complete.
@@ -105,11 +108,11 @@
 - [ ] Add generated-C compilation tests with a strict warning policy.
 
 ### CLI & developer experience
-- [ ] Design a proper CLI instead of relying on `input.wr`/`output.c` defaults.
-- [ ] Support explicit input/output paths.
-- [ ] Add clear exit codes.
-- [ ] Add `--help` and `--version`.
-- [ ] Improve compiler error messages and command-line reporting.
+- [x] Design and implement a first proper CLI surface.
+- [x] Support explicit input/output paths.
+- [x] Add clear exit codes.
+- [x] Add `--help` and `--version`.
+- [x] Improve compiler command-line reporting.
 
 ### Web playground
 - [ ] Reconcile the web playground with the native language specification.
@@ -147,13 +150,14 @@
 ## Rules for Future Development
 
 1. **Never modify `main` for experimental work.** Use `development` first.
-2. **Do not claim a feature is complete until it has a test.**
-3. **Keep `compiler.c` and `compiler.wr` behavior synchronized.**
-4. **Prefer deterministic compiler logic over naming heuristics.**
-5. **Do not commit secrets, local machine state, generated build artifacts, or temporary files.**
-6. **Every major compiler change should include a regression test.**
-7. **Self-hosting must remain reproducible.**
-8. **PR/test workflows should default to read-only permissions.**
+2. **Implementation first:** complete meaningful compiler/runtime/tooling work before spending cycles on broad testing.
+3. **Do not claim a feature is complete until the implementation itself is finished.**
+4. **Keep `compiler.c` and `compiler.wr` behavior synchronized.**
+5. **Prefer deterministic compiler logic over naming heuristics.**
+6. **Do not commit secrets, local machine state, generated build artifacts, or temporary files.**
+7. **After the implementation pass, run the focused and full validation suites.**
+8. **Self-hosting must remain reproducible.**
+9. **PR/test workflows should default to read-only permissions.**
 
 ## Branch Policy
 
@@ -187,6 +191,7 @@
 - [x] Stage-0 prototype generation stabilized
 - [x] A real Stage-0 → Stage-1 → Stage-2 reproducibility check passed
 - [x] Deterministic semantic static-check surface added
+- [x] First production-oriented CLI surface added
 
 ### M2 — Self-Hosting Hardening
 - [x] First reproducible bootstrap generation pair
@@ -195,7 +200,7 @@
 - [ ] Self-hosting release gate
 
 ### M3 — Developer Tooling
-- [ ] Proper CLI
+- [x] First CLI foundation
 - [ ] Better errors
 - [ ] Improved VS Code/web tooling
 
@@ -216,35 +221,10 @@
 
 ## Change Log
 
+### 2026-09-08
+- Switched the engineering workflow to implementation-first mode per project direction; broad testing is deferred until the current implementation pass is complete.
+- Added `tools/wear.py` as the first production-oriented CLI surface with isolated build directories, explicit input/output paths, `run`, `compile`, `--help`, `--version`, and structured exit codes.
+- Updated `README.md` with the new CLI workflow.
+
 ### 2026-09-06
 - Added `PROGRESS.md` as the persistent development roadmap and engineering memory for WeaR Lang.
-- Recorded repository stabilization work completed so far.
-- Defined compiler, self-hosting, runtime, testing, CLI, playground, and release milestones.
-- Replaced the previous CI bootstrap smoke flow with a maintainable native regression suite while Stage-0/Stage-1 synchronization remains unresolved.
-- Added regression cases for basic variables/literals, control flow, and function return behavior.
-- Hardened `runtime.c` memory, input, and file-I/O handling.
-- Opened GitHub issue #1 to track Stage-0/Stage-1 semantic synchronization and bootstrap reproducibility.
-
-### 2026-09-08
-- Added `tools/audit_bootstrap.py` to make Stage-0/Stage-1 capability drift measurable.
-- Added `docs/bootstrap-contract.md` defining the canonical-source and release-gate bootstrap invariants.
-- Added a visible CI bootstrap-audit job with non-gating behavior until Issue #1 is resolved.
-- Strengthened bootstrap auditing so both Stage-0 and Stage-1 capabilities are checked explicitly.
-- Created `feature/m1-regression-hardening` from `development` for the next isolated engineering batch.
-- Added M1 workflow and compiler architecture documentation.
-- Formalized the repository branching policy.
-- Added deferred regression fixtures for string concatenation, typed parameters, `tapi_jika`, `input()`, and imports.
-- Added a real multi-stage bootstrap runner and CI workflow that attempt Stage-0 → Stage-1 → Stage-2 generation and reproducibility verification.
-- Made feature-branch pushes run the standard CI suite.
-- Added complete Stage-1 compiler diagnostics to the bootstrap runner.
-- Confirmed the first concrete Stage-1 blockers: incorrect return type generation for `process_imports` and invalid three-operand `__wear_concat(...)` generation for chained concatenation.
-- Fixed the regression harness so isolated test workspaces include the runtime dependency required by Stage-0.
-- Applied Stage-0 root-cause repairs for string-returning functions and legacy three-operand concatenation compatibility.
-- Added typed parameter synchronization and deterministic prototype generation.
-- Fixed the codemod duplicate-declaration regression and made the repair path fully idempotent.
-- Achieved the first real Stage-0 → Stage-1 → Stage-2 reproducibility pass.
-- Tightened GitHub Actions permissions so PR/test workflows use read-only repository access by default.
-- Added the deterministic symbol/type-tracking contract and deferred fixture using arbitrary variable names.
-- Added an opt-in deferred regression runner mode so semantic fixtures can be exercised without changing the baseline CI contract.
-- Added `tools/typecheck_wr.py` as an independent semantic checker for variable declarations and `cetak` expressions.
-- Added a dedicated semantic-static CI job so type-contract regressions are detected independently from compiler name heuristics.
