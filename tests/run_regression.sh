@@ -6,10 +6,14 @@ WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 CC="${CC:-gcc}"
-CFLAGS="${CFLAGS:--std=c11 -Wall -Wextra -O2 -Wno-unused-parameter}"
+CFLAGS="${CFLAGS:--std=c11 -Wall -Wextra -O2 -Wno-unused-parameter -Wno-unused-result}"
 
 printf '%s\n' '[1/3] Building Stage-0 compiler...'
 $CC $CFLAGS "$ROOT_DIR/compiler.c" -o "$WORK_DIR/wear-stage0"
+
+# Stage-0 reads runtime.c from its current working directory. Keep the
+# regression workspace self-contained so tests do not depend on process CWD.
+cp "$ROOT_DIR/runtime.c" "$WORK_DIR/runtime.c"
 
 run_case() {
     local case_name="$1"
