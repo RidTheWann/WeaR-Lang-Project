@@ -47,6 +47,7 @@
 - [x] Add deterministic semantic static checks independent of compiler naming heuristics.
 - [x] Add `tools/wear.py`, a portable command-line frontend with compile/run/version support and explicit input/output paths.
 - [x] Add a semantic compatibility frontend that lowers typed variables to deterministic backend-safe identifiers before Stage-0 transpilation.
+- [x] Add localized frontend normalization for Indonesian/English source while keeping a single canonical backend dialect.
 
 ### Compiler core
 - [x] Extend Stage-0 string-return detection for `input()` and `process_imports()`.
@@ -55,6 +56,8 @@
 - [x] Align the standalone runtime concatenation dispatcher with the legacy three-operand compatibility path.
 - [x] Add typed parameter support for the current self-hosted compiler surface (`: int` / `: str`).
 - [x] Add deterministic function prototype generation to Stage-0 output.
+- [x] Make the canonical semantic layer preserve global-symbol visibility inside functions.
+- [x] Make function return inference preserve `unknown` for no-return functions and `error` for incompatible mixed return types instead of silently defaulting to `int`.
 
 ### Runtime
 - [x] Harden string allocation and concatenation against null inputs and size overflow.
@@ -72,11 +75,14 @@
 - [x] Formalize the repository branching policy.
 - [x] Document the deterministic symbol/type-tracking contract.
 - [x] Document the new CLI workflow in `README.md`.
+- [x] Document the multilingual frontend architecture in `docs/multilingual-frontend.md`.
 
 ### Regression surface
 - [x] Add deferred coverage fixtures for string concatenation, typed parameters, `tapi_jika`, `input()`, and imports.
 - [x] Document the distinction between active baseline tests and deferred compiler-surface tests.
 - [x] Add an arbitrary-name fixture for deterministic string symbol/type tracking.
+- [x] Add a global-symbol visibility fixture for function semantic analysis.
+- [x] Add a mixed-return fixture to prevent silent return-type fallback.
 
 ---
 
@@ -194,6 +200,7 @@
 - [x] Deterministic semantic static-check surface added
 - [x] First production-oriented CLI surface added
 - [x] Semantic compatibility lowering integrated into the CLI backend path
+- [x] Multilingual frontend normalization integrated into the CLI path
 
 ### M2 — Self-Hosting Hardening
 - [x] First reproducible bootstrap generation pair
@@ -224,12 +231,16 @@
 ## Change Log
 
 ### 2026-09-08
-- Switched the engineering workflow to implementation-first mode per project direction; broad testing is deferred until the current implementation pass is complete.
+- Switched the engineering workflow to implementation-first mode per project direction; broad testing is deferred until the current implementation pass is substantially complete.
 - Added `tools/wear.py` as the first production-oriented CLI surface with isolated build directories, explicit input/output paths, `run`, `compile`, `--help`, `--version`, and structured exit codes.
 - Added `tools/semantic_contract.py` as the canonical frontend primitive type/signature layer.
 - Added `tools/semantic_frontend.py` to lower typed variables to deterministic backend-safe identifiers before the legacy Stage-0 compiler.
 - Integrated semantic lowering into `tools/wear.py`, so the supported CLI path no longer depends on user variable naming for string/int selection.
-- Kept the self-hosted compiler migration explicitly in progress; this frontend is the compatibility bridge until `compiler.c` / `compiler.wr` receive native symbol-table tracking.
+- Added localized frontend normalization for Indonesian and English keyword spellings while preserving strings/comments.
+- Fixed semantic scope handling so functions resolve global symbols before local shadowing.
+- Fixed function return inference so no-return functions remain `unknown` and incompatible mixed returns become `error` instead of silently defaulting to `int`.
+- Added semantic regression fixtures for global visibility and mixed return types.
+- Kept the native self-hosted compiler migration explicitly in progress; the Python semantic layer remains a compatibility bridge until `compiler.c` / `compiler.wr` receive native symbol-table tracking.
 
 ### 2026-09-06
 - Added `PROGRESS.md` as the persistent development roadmap and engineering memory for WeaR Lang.
