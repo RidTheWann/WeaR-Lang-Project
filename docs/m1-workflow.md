@@ -30,6 +30,10 @@ Before a feature branch is merged into `development`:
 
 `compiler.wr` is the canonical self-hosted compiler source. `compiler.c` is the Stage-0 bootstrap compiler. Self-hosting is not considered release-safe until Stage-0 can compile the canonical Stage-1 source and consecutive bootstrap generations are reproducible.
 
+## M1 synchronization policy
+
+The Stage-0 compiler must understand the same explicit parameter types and function-return categories used by the canonical Stage-1 source. Prototype generation and string concatenation must also have deterministic output semantics so Stage-1 and subsequent generations converge without accidental type changes.
+
 Until that point, the bootstrap audit is intentionally visible but non-gating.
 
 ## Current feature batch
