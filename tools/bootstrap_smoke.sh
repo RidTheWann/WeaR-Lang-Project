@@ -26,11 +26,15 @@ run_stage0() {
 
 log "Preparing isolated bootstrap workspace"
 cp "$ROOT_DIR/compiler.c" "$WORK_DIR/compiler.c"
+cp "$ROOT_DIR/compiler_legacy.c" "$WORK_DIR/compiler_legacy.c"
 cp "$ROOT_DIR/compiler.wr" "$WORK_DIR/compiler.wr"
 cp "$ROOT_DIR/runtime.c" "$WORK_DIR/runtime.c"
+mkdir -p "$WORK_DIR/tools"
+cp "$ROOT_DIR/tools/native_symbol_table.h" "$WORK_DIR/tools/native_symbol_table.h"
+cp "$ROOT_DIR/tools/native_types.h" "$WORK_DIR/tools/native_types.h"
 
 log "[1/5] Building Stage-0 native compiler"
-if ! $CC $CFLAGS "$WORK_DIR/compiler.c" -o "$WORK_DIR/stage0" 2>"$WORK_DIR/stage0-build-warnings.log"; then
+if ! $CC $CFLAGS "$WORK_DIR/compiler.c" "$ROOT_DIR/tools/native_symbol_table.c" -o "$WORK_DIR/stage0" 2>"$WORK_DIR/stage0-build-warnings.log"; then
     cat "$WORK_DIR/stage0-build-warnings.log"
     printf '\nBootstrap failed while building Stage-0 compiler.\n' >&2
     exit 1
