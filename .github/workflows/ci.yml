@@ -30,6 +30,23 @@ jobs:
       - name: Run native regression suite
         run: bash tests/run_regression.sh
 
+  deferred-semantic-regression:
+    name: Deferred semantic regression (informational)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc
+
+      - name: Run deferred semantic regression surface
+        env:
+          WEAR_RUN_DEFERRED: '1'
+        run: bash tests/run_regression.sh
+
   bootstrap-audit:
     name: Stage-0 / Stage-1 bootstrap audit
     runs-on: ubuntu-latest
