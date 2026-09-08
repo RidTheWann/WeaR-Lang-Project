@@ -39,8 +39,8 @@
 - [x] Strengthen the bootstrap audit so Stage-0 and Stage-1 requirements are checked bidirectionally.
 - [x] Add an isolated multi-stage bootstrap runner for Stage-0 → Stage-1 → Stage-2 reproducibility checks.
 - [x] Add a dedicated bootstrap workflow for feature branches and pull requests into `development`.
-- [x] Make feature branches run the standard CI suite on push.
 - [x] Add complete diagnostics when a bootstrap compiler stage fails to build.
+- [x] Fix the isolated regression harness so Stage-0 receives its required `runtime.c` dependency.
 - [x] Document the development/stable branch model.
 
 ### Runtime
@@ -169,6 +169,7 @@
 - [x] Deferred regression surface is documented
 - [x] Real multi-stage bootstrap execution is wired into CI
 - [x] Bootstrap failure diagnostics expose the first Stage-1 compilation blockers
+- [x] Regression workspace dependency handling fixed
 
 ### M2 — Self-Hosting Hardening
 - [ ] Reproducible bootstrap
@@ -219,3 +220,4 @@
 - Made feature-branch pushes run the standard CI suite.
 - Added complete Stage-1 compiler diagnostics to the bootstrap runner.
 - Confirmed the first concrete Stage-1 blockers: incorrect return type generation for `process_imports` and invalid three-operand `__wear_concat(...)` generation for chained concatenation.
+- Fixed the regression harness so isolated test workspaces include the runtime dependency required by Stage-0.
