@@ -6,7 +6,10 @@ WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 CC="${CC:-gcc}"
-CFLAGS="${CFLAGS:--std=c11 -Wall -Wextra -O2 -Wno-unused-parameter}"
+# M1 bootstrap exploration intentionally keeps warnings visible without letting
+# legacy Stage-0 warnings mask the actual bootstrap failure point. The final
+# release gate will restore -Werror after compiler.c is warning-clean.
+CFLAGS="${CFLAGS:--std=c11 -Wall -Wextra -O2 -Wno-unused-parameter -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-result}"
 
 log() {
     printf '[bootstrap] %s\n' "$*"
@@ -29,7 +32,7 @@ cp "$ROOT_DIR/runtime.c" "$WORK_DIR/runtime.c"
 log "[1/5] Building Stage-0 native compiler"
 $CC $CFLAGS "$WORK_DIR/compiler.c" -o "$WORK_DIR/stage0" 2>"$WORK_DIR/stage0-build-warnings.log"
 if [ -s "$WORK_DIR/stage0-build-warnings.log" ]; then
-    log "Stage-0 compiler warnings detected (non-gating during M1):"
+    log "Stage-0 warnings detected (informational during M1):"
     sed 's/^/[warning] /' "$WORK_DIR/stage0-build-warnings.log"
 fi
 
@@ -47,16 +50,20 @@ mv "$WORK_DIR/output.c" "$WORK_DIR/stage1.c"
 log "[3/5] Building Stage-1 compiler"
 $CC $CFLAGS "$WORK_DIR/stage1.c" -o "$WORK_DIR/stage1" 2>"$WORK_DIR/stage1-build-warnings.log"
 if [ -s "$WORK_DIR/stage1-build-warnings.log" ]; then
-    log "Stage-1 compiler warnings detected (non-gating during M1):"
+    log "Stage-1 warnings detected (informational during M1):"
     sed 's/^/[warning] /' "$WORK_DIR/stage1-build-warnings.log"
 fi
 
 log "[4/5] Generating Stage-2 from the same canonical compiler.wr"
 cp "$WORK_DIR/compiler.wr" "$WORK_DIR/input.wr"
-(
+if ! (
     cd "$WORK_DIR"
     ./stage1 > stage1.log 2>&1
-)
+); then
+    cat "$WORK_DIR/stage1.log"
+    printf '\nBootstrap failed during Stage-1 -> Stage-2 generation.\n' >&2
+    exit 1
+fi
 
 test -s "$WORK_DIR/output.c"
 mv "$WORK_DIR/output.c" "$WORK_DIR/stage2.c"
