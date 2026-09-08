@@ -47,12 +47,20 @@ def main() -> int:
         ROOT / "tests/run_regression.sh": (
             '"$ROOT_DIR/tools/native_symbol_table.c"',
             "string_symbol_tracking",
+            "function_string_scope",
         ),
         ROOT / "tests/cases/string_symbol_tracking.wr": (
             'var caption = "WeaR symbol tracking OK"',
             "var total = 42",
             "cetak caption",
             "cetak total",
+        ),
+        ROOT / "tests/cases/function_string_scope.wr": (
+            "fungsi make_text(seed: str)",
+            "var caption = seed",
+            'var caption = "other"',
+            "cetak caption",
+            "cetak index",
         ),
     }
 
@@ -74,7 +82,8 @@ def main() -> int:
     print("[OK] compiler.c consumes the native symbol/function lookup contract")
     print("[OK] mutable native declarations are available")
     print("[OK] regression runner links native_symbol_table.c")
-    print("[OK] arbitrary-name string/int regression fixture is wired")
+    print("[OK] arbitrary-name string/int fixture is wired")
+    print("[OK] function-local string/int scope fixture is wired")
     print()
     print("Native integration audit passed.")
     return 0

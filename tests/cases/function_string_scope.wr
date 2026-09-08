@@ -1,0 +1,18 @@
+// Regression: native symbol tracking must preserve function-local string types.
+// Similar variable names intentionally appear in separate functions.
+fungsi make_text(seed: str) {
+    var caption = seed
+    var index = 7
+    cetak caption
+    cetak index
+}
+
+fungsi make_other() {
+    var caption = "other"
+    var index = 42
+    cetak caption
+    cetak index
+}
+
+make_text("local")
+make_other()

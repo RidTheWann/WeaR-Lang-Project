@@ -41,5 +41,6 @@ run_case control_flow $'3\n2\n1\nWeaR Lang regression: control OK'
 run_case functions '42'
 run_case print_types $'literal OK\nWeaR print string OK\n42'
 run_case string_symbol_tracking $'WeaR symbol tracking OK\n42\ndeterministic\n7'
+run_case function_string_scope $'local\n7\nother\n42'
 
 printf '%s\n' '[3/3] Regression suite passed.'

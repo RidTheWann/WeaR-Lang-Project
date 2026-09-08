@@ -11,7 +11,7 @@
 
 **Engineering branch:** `development`
 
-**Feature branch:** `feature/m2-bootstrap-hardening`
+**Feature branch:** `feature/m2-bootstrap-parity`
 
 **Current phase:** M2 bootstrap hardening
 
@@ -58,6 +58,8 @@
 - [x] Add an M1 full compiler/tooling suite covering Python syntax, semantic fixtures, native symbol-table contract compilation, native regression tests, and bootstrap auditing.
 - [x] Add a native integration audit that verifies compiler.c, native symbol-table APIs, and the string symbol regression fixture remain wired together.
 - [x] Add the native integration audit as a required CI job for feature branches and pull requests.
+- [x] Add function-local string/int scope coverage to the native regression runner.
+- [x] Extend the native integration audit to require the function-local scope fixture.
 
 ### Compiler core
 - [x] Extend Stage-0 string-return detection for `input()` and `process_imports()`.
@@ -95,6 +97,7 @@
 - [x] Add a global-symbol visibility fixture for function semantic analysis.
 - [x] Add a mixed-return fixture to prevent silent return-type fallback.
 - [x] Add a symbol/function namespace shadowing fixture.
+- [x] Add function-local string/int scope coverage with shadowed names and typed parameters.
 
 ---
 
@@ -125,6 +128,7 @@
 - [ ] Add tests for arrays and broader collection behavior.
 - [ ] Add negative tests for syntax/type errors.
 - [ ] Add generated-C compilation tests with a strict warning policy.
+- [ ] Validate function-local scope fixture in CI and use its failure diagnostics to close Stage-0/Stage-1 parity gaps.
 
 ### CLI & developer experience
 - [x] Design and implement a first proper CLI surface.
@@ -165,6 +169,12 @@
 - [ ] Changelog for each stable release.
 
 ## Change Log
+
+### 2026-09-09
+- Created `feature/m2-bootstrap-parity` from the merged `development` tip.
+- Added `tests/cases/function_string_scope.wr` to exercise function-local string/int symbols, shadowed names, and typed parameters.
+- Wired the new fixture into `tests/run_regression.sh` and `tools/audit_native_integration.py`.
+- Next engineering step is to use the resulting CI diagnostics to close native Stage-0/Stage-1 type-resolution parity, rather than hiding the known bootstrap mismatch behind legacy fallback behavior.
 
 ### 2026-09-08
 - Merged PR #5 into `development`.
