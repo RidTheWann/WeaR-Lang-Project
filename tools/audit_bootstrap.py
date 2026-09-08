@@ -3,105 +3,94 @@
 
 The self-hosted compiler in ``compiler.wr`` is the canonical language/compiler
 source. ``compiler.c`` is the native Stage-0 bootstrap implementation and must
-support every construct needed to compile the canonical source.
+support every construct required to compile the canonical source.
 
-This audit is intentionally structural, not semantic. It makes drift visible
-and deterministic in CI without pretending that the current compiler pair is
-already bootstrap-safe.
+The capability list lives in ``tools/bootstrap_contract.json`` so the audit is
+extensible without changing the Python implementation for every new feature.
+The audit is intentionally structural, not semantic: real bootstrap execution
+remains the authoritative check once the Stage-0 implementation catches up.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-STAGE0 = ROOT / "compiler.c"
-STAGE1 = ROOT / "compiler.wr"
+CONTRACT = ROOT / "tools" / "bootstrap_contract.json"
 
 
-@dataclass(frozen=True)
-class ContractCheck:
-    name: str
-    stage0_markers: tuple[str, ...]
-    stage1_markers: tuple[str, ...]
+def read_contract() -> dict[str, Any]:
+    try:
+        data = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"cannot read bootstrap contract: {exc}") from exc
+
+    if not isinstance(data, dict):
+        raise RuntimeError("bootstrap contract must be a JSON object")
+    if data.get("version") != 1:
+        raise RuntimeError("unsupported bootstrap contract version")
+    if data.get("canonical_source") != "compiler.wr":
+        raise RuntimeError("canonical_source must be compiler.wr")
+    if data.get("stage0_source") != "compiler.c":
+        raise RuntimeError("stage0_source must be compiler.c")
+    if not isinstance(data.get("checks"), list) or not data["checks"]:
+        raise RuntimeError("bootstrap contract must contain a non-empty checks list")
+    return data
 
 
-CHECKS = (
-    ContractCheck(
-        "import preprocessing",
-        ("process_imports",),
-        ("process_imports", "impor"),
-    ),
-    ContractCheck(
-        "runtime input builtin",
-        ("__wear_input",),
-        ("__wear_input", "input"),
-    ),
-    ContractCheck(
-        "else-if keyword",
-        ('"tapi_jika"', "else if"),
-        ('"tapi_jika"', "tapi_jika"),
-    ),
-    ContractCheck(
-        "function prototypes",
-        ("Function Prototypes", "global_protos"),
-        ("global_protos", "global_proto"),
-    ),
-    ContractCheck(
-        "typed parameter syntax",
-        (': int', ': str'),
-        (": int", ": str", "ctype_str"),
-    ),
-    ContractCheck(
-        "underscore-aware identifiers",
-        ('"_"',),
-        ('"_"',),
-    ),
-    ContractCheck(
-        "runtime file reader",
-        ("__wear_read_file",),
-        ("baca_file",),
-    ),
-    ContractCheck(
-        "runtime file writer",
-        ("__wear_write_file",),
-        ("tulis_file",),
-    ),
-    ContractCheck(
-        "string comparison",
-        ("__wear_streq",),
-        ("sama",),
-    ),
-    ContractCheck(
-        "newline runtime helper",
-        ("__wear_newline_char",),
-        ("newline_char",),
-    ),
-)
-
-
-def has_all(source: str, markers: tuple[str, ...]) -> bool:
+def has_all(source: str, markers: list[str]) -> bool:
     return all(marker in source for marker in markers)
 
 
 def main() -> int:
-    if not STAGE0.is_file() or not STAGE1.is_file():
+    stage0_path = ROOT / "compiler.c"
+    stage1_path = ROOT / "compiler.wr"
+
+    if not stage0_path.is_file() or not stage1_path.is_file():
         print("error: compiler.c and compiler.wr must both exist")
         return 2
 
-    stage0 = STAGE0.read_text(encoding="utf-8")
-    stage1 = STAGE1.read_text(encoding="utf-8")
+    try:
+        contract = read_contract()
+    except RuntimeError as exc:
+        print(f"error: {exc}")
+        return 2
+
+    stage0 = stage0_path.read_text(encoding="utf-8")
+    stage1 = stage1_path.read_text(encoding="utf-8")
 
     print("WeaR bootstrap capability audit")
-    print(f"Stage-0: {STAGE0.relative_to(ROOT)}")
-    print(f"Stage-1: {STAGE1.relative_to(ROOT)}")
+    print(f"Contract: {CONTRACT.relative_to(ROOT)}")
+    print(f"Stage-0: {stage0_path.relative_to(ROOT)}")
+    print(f"Stage-1: {stage1_path.relative_to(ROOT)}")
     print()
 
     drift = 0
-    for check in CHECKS:
-        present0 = has_all(stage0, check.stage0_markers)
-        present1 = has_all(stage1, check.stage1_markers)
+    for raw_check in contract["checks"]:
+        if not isinstance(raw_check, dict):
+            print("[INVALID] contract entry is not an object")
+            drift += 1
+            continue
+
+        name = raw_check.get("name")
+        stage0_markers = raw_check.get("stage0")
+        stage1_markers = raw_check.get("stage1")
+
+        if (
+            not isinstance(name, str)
+            or not isinstance(stage0_markers, list)
+            or not all(isinstance(item, str) for item in stage0_markers)
+            or not isinstance(stage1_markers, list)
+            or not all(isinstance(item, str) for item in stage1_markers)
+        ):
+            print("[INVALID] malformed contract entry")
+            drift += 1
+            continue
+
+        present0 = has_all(stage0, stage0_markers)
+        present1 = has_all(stage1, stage1_markers)
 
         if present0 and present1:
             state = "OK"
@@ -116,15 +105,21 @@ def main() -> int:
             drift += 1
 
         print(
-            f"[{state}] {check.name}: "
+            f"[{state}] {name}: "
             f"Stage-0={'yes' if present0 else 'no'}, "
             f"Stage-1={'yes' if present1 else 'no'}"
         )
 
         if not present0:
-            print(f"       Stage-0 markers required: {', '.join(repr(x) for x in check.stage0_markers)}")
+            print(
+                "       Stage-0 markers required: "
+                + ", ".join(repr(item) for item in stage0_markers)
+            )
         if not present1:
-            print(f"       Stage-1 markers required: {', '.join(repr(x) for x in check.stage1_markers)}")
+            print(
+                "       Stage-1 markers required: "
+                + ", ".join(repr(item) for item in stage1_markers)
+            )
 
     print()
     if drift:
