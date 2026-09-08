@@ -608,6 +608,7 @@ int main(int argc, char* argv[]) {
     char* global_protos = "";
     char* global_protos = "";
     char* global_protos = "";
+    char* global_protos = "";
     char* global_code = "";
     char* main_code = "";
     char* nl = __wear_newline_char();
