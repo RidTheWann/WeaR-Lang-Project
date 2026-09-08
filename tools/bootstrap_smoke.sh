@@ -30,7 +30,11 @@ cp "$ROOT_DIR/compiler.wr" "$WORK_DIR/compiler.wr"
 cp "$ROOT_DIR/runtime.c" "$WORK_DIR/runtime.c"
 
 log "[1/5] Building Stage-0 native compiler"
-$CC $CFLAGS "$WORK_DIR/compiler.c" -o "$WORK_DIR/stage0" 2>"$WORK_DIR/stage0-build-warnings.log"
+if ! $CC $CFLAGS "$WORK_DIR/compiler.c" -o "$WORK_DIR/stage0" 2>"$WORK_DIR/stage0-build-warnings.log"; then
+    cat "$WORK_DIR/stage0-build-warnings.log"
+    printf '\nBootstrap failed while building Stage-0 compiler.\n' >&2
+    exit 1
+fi
 if [ -s "$WORK_DIR/stage0-build-warnings.log" ]; then
     log "Stage-0 warnings detected (informational during M1):"
     sed 's/^/[warning] /' "$WORK_DIR/stage0-build-warnings.log"
@@ -48,10 +52,15 @@ test -s "$WORK_DIR/output.c"
 mv "$WORK_DIR/output.c" "$WORK_DIR/stage1.c"
 
 log "[3/5] Building Stage-1 compiler"
-$CC $CFLAGS "$WORK_DIR/stage1.c" -o "$WORK_DIR/stage1" 2>"$WORK_DIR/stage1-build-warnings.log"
-if [ -s "$WORK_DIR/stage1-build-warnings.log" ]; then
+if ! $CC $CFLAGS "$WORK_DIR/stage1.c" -o "$WORK_DIR/stage1" 2>"$WORK_DIR/stage1-build-errors.log"; then
+    log "Stage-1 compiler build failed. GCC diagnostics:"
+    cat "$WORK_DIR/stage1-build-errors.log"
+    printf '\nBootstrap failed while compiling Stage-1.\n' >&2
+    exit 1
+fi
+if [ -s "$WORK_DIR/stage1-build-errors.log" ]; then
     log "Stage-1 warnings detected (informational during M1):"
-    sed 's/^/[warning] /' "$WORK_DIR/stage1-build-warnings.log"
+    sed 's/^/[warning] /' "$WORK_DIR/stage1-build-errors.log"
 fi
 
 log "[4/5] Generating Stage-2 from the same canonical compiler.wr"
