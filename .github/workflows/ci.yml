@@ -29,6 +29,18 @@ jobs:
       - name: Run native regression suite
         run: bash tests/run_regression.sh
 
+  bootstrap-audit:
+    name: Stage-0 / Stage-1 bootstrap audit
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run bootstrap capability audit
+        run: python3 tools/audit_bootstrap.py
+
   repository-hygiene:
     name: Repository hygiene
     runs-on: ubuntu-latest
