@@ -2,10 +2,9 @@
 """WeaR Lang command-line frontend.
 
 The frontend isolates compiler artifacts in a temporary workspace and provides
-one stable entry point for source validation, transpilation, and native builds.
-Semantic validation is performed before invoking the legacy Stage-0 compiler;
-this gives users deterministic diagnostics while the self-hosted compiler is
-being migrated away from identifier-name heuristics.
+one stable entry point for source validation, semantic lowering, transpilation,
+and native builds. The legacy Stage-0 compiler remains the backend while the
+frontend removes its historical dependence on variable-name-based typing.
 """
 
 from __future__ import annotations
@@ -19,6 +18,7 @@ import tempfile
 from pathlib import Path
 
 from semantic_contract import check_source
+from semantic_frontend import rewrite_file
 
 VERSION = "1.1-dev"
 ROOT = Path(__file__).resolve().parents[1]
@@ -77,7 +77,11 @@ def build_stage0(compiler_source: Path, runtime_source: Path, cc: str, workdir: 
 
 
 def transpile(compiler_exe: Path, source: Path, workdir: Path) -> Path:
-    shutil.copy2(source, workdir / "input.wr")
+    # The backend still expects input.wr. Feed it the semantically lowered
+    # source so arbitrary user variable names no longer control C type choice.
+    lowered = workdir / "input.wr"
+    rewrite_file(source, lowered)
+
     result = run_process([str(compiler_exe)], cwd=workdir)
     if result.returncode != 0:
         diagnostics = "\n".join(part for part in (result.stdout.strip(), result.stderr.strip()) if part)
@@ -199,7 +203,7 @@ def command_run(args: argparse.Namespace) -> int:
 
 
 def add_common_options(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--no-semantic-check", action="store_true", help="skip the deterministic source semantic preflight")
+    parser.add_argument("--no-semantic-check", action="store_true", help="skip semantic validation and compatibility lowering")
 
 
 def build_parser() -> argparse.ArgumentParser:
