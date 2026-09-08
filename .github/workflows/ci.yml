@@ -30,6 +30,19 @@ jobs:
       - name: Run native regression suite
         run: bash tests/run_regression.sh
 
+  semantic-static-check:
+    name: Deterministic semantic static checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify semantic fixtures without compiler heuristics
+        run: |
+          python3 tools/typecheck_wr.py tests/cases/string_symbol_tracking.wr
+          python3 tools/typecheck_wr.py tests/cases/print_types.wr
+
   deferred-semantic-regression:
     name: Deferred semantic regression (informational)
     runs-on: ubuntu-latest
